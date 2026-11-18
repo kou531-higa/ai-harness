@@ -29,3 +29,7 @@ Claude Code を「個人が使う道具」ではなく、チームの開発工�
 
 - サンプルデータは、すべて架空のものです。
 - 現在、外部からの Pull Request は受け付けていません（[CONTRIBUTING.md](CONTRIBUTING.md)）。
+
+## ライセンス
+
+[MIT](LICENSE)
