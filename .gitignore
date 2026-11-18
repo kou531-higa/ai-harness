@@ -1,0 +1,44 @@
+# 秘密情報
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.tfvars
+!*.example.tfvars
+
+# ハーネスの手元ログ
+.harness/
+
+# Claude Code の個人設定
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+*.egg-info/
+
+# Node
+node_modules/
+.next/
+playwright-report/
+test-results/
+blob-report/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+tfplan
+
+# OS
+.DS_Store
