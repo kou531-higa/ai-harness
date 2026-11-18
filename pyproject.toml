@@ -1,0 +1,25 @@
+[project]
+name = "ai-harness"
+version = "0.1.0"
+description = "AIは作業し、人は判断する。Claude Code をチームの開発工程に組み込むハーネス"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"  # フックとスクリプトは導入先の古い Python でも動かす
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["UP006", "UP007", "UP035", "UP045"]  # typing.List などを 3.8 互換のため許す
