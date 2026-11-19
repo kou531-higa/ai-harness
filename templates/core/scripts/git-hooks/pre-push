@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""main への直接の push を止める（harness init が .git/hooks/pre-push に入れる）。
+
+GitHub の無料プランの非公開リポジトリでは、ブランチ保護が使えない。
+その代わりに手元で止める。main を変えるのは、PR を `make merge` でマージしたときだけ。
+守るブランチは環境変数 HARNESS_PROTECTED_BRANCHES（カンマ区切り）で変えられる。
+"""
+
+import os
+import sys
+
+protected = [b.strip() for b in os.environ.get("HARNESS_PROTECTED_BRANCHES", "main").split(",") if b.strip()]
+refs = {f"refs/heads/{b}" for b in protected}
+
+blocked = []
+for line in sys.stdin:
+    parts = line.split()
+    if len(parts) == 4 and parts[2] in refs:
+        blocked.append(parts[2].replace("refs/heads/", ""))
+
+if blocked:
+    sys.stderr.write(
+        f"push を止めました：{', '.join(sorted(set(blocked)))} へは直接 push しません。\n"
+        "ブランチを切って PR を作り、検査が緑になってから make merge PR=<番号> でマージしてください。\n"
+    )
+    sys.exit(1)

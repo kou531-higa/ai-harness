@@ -2,7 +2,7 @@
 
 **AIは作業し、人は判断する。** その工程を、リポジトリに置ける形（ハーネス）にするためのテンプレートとCLIです。
 
-> 状態：作成中（P1）。まだ動くものはありません。
+> 状態：作成中（P1）。
 
 ## 何をするものか
 
@@ -17,6 +17,18 @@ Claude Code を「個人が使う道具」ではなく、チームの開発工�
 | 品質ゲート | テスト・Lint・型・差分カバレッジ・PRサイズを毎回確かめる |
 | 判断メモ | AIが止まったときに、人が速く決められる形で戻す |
 | 指標 | AIが止まった理由とDORA指標を数え、ルールに変える |
+
+## 使い方
+
+```
+# 導入先のリポジトリで実行する（既にあるファイルは上書きしない）
+uvx --from git+https://github.com/kou531-higa/ai-harness harness init --dry-run
+uvx --from git+https://github.com/kou531-higa/ai-harness harness init
+uvx --from git+https://github.com/kou531-higa/ai-harness harness labels   # AI が止まった理由のラベル
+```
+
+- 層（`web`・`api`・`batch`・`db`・`e2e`）は、ディレクトリがあるものだけ規約を入れます
+- main への直接の push を止める pre-push フックと、検査がすべて緑のときだけマージする `scripts/merge_pr.py` が入ります（ブランチ保護が使えない無料プランの非公開リポジトリ向け）
 
 ## 予定
 
