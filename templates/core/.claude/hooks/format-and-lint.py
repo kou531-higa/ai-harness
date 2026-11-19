@@ -3,6 +3,10 @@
 
 自動で直せない指摘が残ったら終了コード 2 で AI に返し、直させる。
 ツールが入っていない場合は、その拡張子を飛ばす（止めない）。
+
+ツールは、編集したファイルに一番近い層のものを使う（モノレポで web/・api/・batch/ が別々の設定を持つため）。
+ファイルのあるディレクトリからリポジトリ直下まで順に上り、node_modules/.bin と .venv/bin を探す。
+見つかった層のディレクトリで実行し、その層の設定（.eslintrc や pyproject.toml）が効くようにする。
 """
 
 from __future__ import annotations
@@ -41,14 +45,19 @@ for ext in (".tsx", ".js", ".jsx", ".mjs"):
     STEPS[ext] = STEPS[".ts"]
 
 
-def find_tool(root: Path, name: str) -> Optional[str]:
-    local = root / "node_modules" / ".bin" / name
-    if local.exists():
-        return str(local)
-    web_local = root / "web" / "node_modules" / ".bin" / name
-    if web_local.exists():
-        return str(web_local)
-    return shutil.which(name)
+def find_tool(root: Path, rel: str, name: str) -> Tuple[Optional[str], Path]:
+    """(実行ファイル, 実行するディレクトリ) を返す。見つからなければ (None, root)。"""
+    d = (root / rel).parent
+    while True:
+        for sub in (("node_modules", ".bin"), (".venv", "bin")):
+            cand = d.joinpath(*sub, name)
+            if cand.exists():
+                return str(cand), d
+        if d == root or root not in d.parents:
+            break
+        d = d.parent
+    found = shutil.which(name)
+    return found, root
 
 
 def run(cmd: List[str], root: Path) -> Tuple[int, str]:
@@ -71,15 +80,18 @@ def main() -> int:
     steps = STEPS.get(Path(rel).suffix.lower(), [])
     problems = []
     for tool, fixers, checkers in steps:
-        exe = find_tool(root, tool)
+        exe, cwd = find_tool(root, rel, tool)
         if exe is None:
             continue
+        target = (root / rel).relative_to(cwd).as_posix()
         for cmd in fixers:
-            run([exe] + [a.replace("{file}", rel) for a in cmd[1:]], root)
+            run([exe] + [a.replace("{file}", target) for a in cmd[1:]], cwd)
         for cmd in checkers:
-            code, out = run([exe] + [a.replace("{file}", rel) for a in cmd[1:]], root)
+            code, out = run([exe] + [a.replace("{file}", target) for a in cmd[1:]], cwd)
             if code != 0:
-                problems.append(f"$ {tool} {' '.join(cmd[1:]).replace('{file}', rel)}\n{out}")
+                where = cwd.relative_to(root).as_posix() or "."
+                command = " ".join(cmd[1:]).replace("{file}", target)
+                problems.append(f"$ {tool} {command}  （{where} で実行）\n{out}")
 
     if problems:
         h.log_event(root, HOOK, "block", "lint", path=rel)
