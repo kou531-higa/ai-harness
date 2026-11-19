@@ -25,6 +25,17 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: python3 scripts/check_pr_size.py --base "origin/${BASE_REF}" --labels "$LABELS"
 
+  review-route:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: AI レビューの割り振りと未カバー（重要な所が未カバーなら止める）
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 scripts/review_route.py --base "origin/${BASE_REF}" --strict | tee -a "$GITHUB_STEP_SUMMARY"
+
   specs:
     runs-on: ubuntu-latest
     steps:

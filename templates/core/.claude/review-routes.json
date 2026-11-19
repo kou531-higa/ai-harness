@@ -1,0 +1,33 @@
+{
+  "note": "レビューの割り振り。paths は場所で選ぶ、content は追加した行の中身で足す。critical は誰かが必ず見る所",
+  "reviewers": {
+    "web": {"paths": ["web/*"]},
+    "api": {"paths": ["api/*"]},
+    "batch": {"paths": ["batch/*"]},
+    "db": {"paths": ["db/*", "*.sql"]},
+    "test": {"paths": ["*.spec.ts", "*.test.ts", "*.test.tsx", "*.db-spec.ts", "*/tests/*", "e2e/*"]},
+    "spec": {"paths": ["docs/*", "catalog/*"]},
+    "harness": {"paths": [".claude/*", ".github/*", "scripts/*", "CLAUDE.md", "*/CLAUDE.md"]},
+    "security": {
+      "content": [
+        "(?i)(password|passwd|secret|token|api[_-]?key|private[_-]?key)",
+        "(?i)(customer_name|customer_phone|phone|email|address)|氏名|電話|住所|個人情報",
+        "console\\.(log|info|debug)|click\\.echo|\\bprint\\(|logger?\\.(info|debug|warn)",
+        "(?i)(execute|query)\\(\\s*f?[\"'].*(\\{|\\+|%s)"
+      ]
+    },
+    "state": {
+      "content": ["['\"](RECEIVED|REVIEWING|WAITING_[A-Z]+|DISPATCHED|VISIT_SCHEDULED|IN_PROGRESS|ON_HOLD|COMPLETED|ACCEPTED|BILLABLE|BILLED|RETURNED|CANCELLED)['\"]"]
+    }
+  },
+  "critical": [
+    "db/migrations/*",
+    "db/procedures/*",
+    "api/src/common/*",
+    "web/src/lib/*",
+    "batch/core/*",
+    "catalog/*",
+    ".github/workflows/*",
+    ".claude/*"
+  ]
+}
