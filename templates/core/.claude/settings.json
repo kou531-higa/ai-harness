@@ -29,7 +29,8 @@
       "Bash(gh pr comment:*)",
       "Bash(gh pr checkout:*)",
       "Bash(python3 scripts/review_route.py:*)",
-      "Bash(python3 scripts/impact.py:*)"
+      "Bash(python3 scripts/impact.py:*)",
+      "Bash(python3 scripts/check_forbidden.py:*)"
     ],
     "deny": [
       "Bash(terraform apply:*)",
@@ -48,7 +49,9 @@
       "Bash(git push origin main:*)",
       "Bash(git push --no-verify:*)",
       "Edit(./scripts/git-hooks/**)",
-      "Write(./scripts/git-hooks/**)"
+      "Write(./scripts/git-hooks/**)",
+      "Edit(./.claude/forbidden-patterns.json)",
+      "Write(./.claude/forbidden-patterns.json)"
     ]
   },
   "hooks": {

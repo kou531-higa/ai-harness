@@ -27,6 +27,10 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           cat "$GITHUB_STEP_SUMMARY"
+      - name: 禁止パターンの今ある所（止めずに一覧）
+        run: |
+          [ -f .claude/forbidden-patterns.json ] || exit 0
+          python3 scripts/check_forbidden.py --all | tee -a "$GITHUB_STEP_SUMMARY" || true
       - name: 未決事項台帳が仕様と合っている
         run: |
           [ -f docs/decisions/undecided.md ] || exit 0

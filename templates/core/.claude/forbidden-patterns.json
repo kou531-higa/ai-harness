@@ -1,0 +1,27 @@
+{
+  "note": "禁止パターン。PR では追加した行だけを見る（導入前からあるものでは止めない）。例外は行末に「forbidden-ok: <id> <理由>」と書き、人がレビューで認める",
+  "states": [],
+  "rules": [
+    {
+      "id": "state-list",
+      "kind": "state-list",
+      "message": "状態名を並べた判定を直接書かない。catalog/ の定義と、そこから作った関数を使う",
+      "paths": ["web/*", "api/*", "batch/*", "db/*"],
+      "allow": ["catalog/*", "*/tests/*", "*.spec.ts", "*.test.ts", "*.test.tsx", "*.db-spec.ts", "e2e/*", "db/migrations/*"]
+    },
+    {
+      "id": "self-paging",
+      "pattern": "\\(\\s*page\\s*-\\s*1\\s*\\)\\s*\\*|\\.skip\\(\\s*\\(",
+      "message": "ページングを自分で計算しない。共通のページング（api/src/common/db/pagination.ts など）を使う",
+      "paths": ["web/*", "api/*", "batch/*"],
+      "allow": ["*/common/*", "*/lib/*", "batch/core/*", "*/tests/*", "*.spec.ts"]
+    },
+    {
+      "id": "sql-format",
+      "pattern": "(execute|query)\\(\\s*f[\"']|(execute|query)\\(\\s*[\"'][^\"']*[\"']\\s*(\\+|%\\s)",
+      "message": "SQL を文字列の組み立てで作らない。パラメータで渡す",
+      "paths": ["api/*", "batch/*"],
+      "allow": ["*/tests/*", "*.spec.ts"]
+    }
+  ]
+}
