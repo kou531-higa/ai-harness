@@ -76,9 +76,15 @@ def test_触っていないものは入れ替え_直したものは上書きせ�
     assert (target / ".claude/skills/old/SKILL.md").exists()  # テンプレートから消えても、勝手に消さない
     assert "*.harness-new" in (target / ".gitignore").read_text(encoding="utf-8")  # 置いたものをコミットしない
 
-    # もう一度回しても、同じ結果（入れ替えたものは「変わらない」に、直したものは引き続き手で合わせる）
+    # もう一度回すと、入れ替えたものは「変わらない」、直したものは「直したまま」（毎回は知らせない）
     again = run_upgrade(target, tdir=tdir)
-    assert again.updated == [] and again.added == [] and again.conflicts == ["CLAUDE.md"]
+    assert again.updated == [] and again.added == [] and again.conflicts == [] and again.kept == ["CLAUDE.md"]
+    assert again.deleted_by_user == ["scripts/check.py"]
+    # テンプレートがまた変わったら、もう一度手で合わせる
+    (tdir / "core/CLAUDE.md").write_text("規約 v3\n", encoding="utf-8")
+    third = run_upgrade(target, tdir=tdir)
+    assert third.conflicts == ["CLAUDE.md"] and third.kept == []
+    assert (target / ("CLAUDE.md" + NEW_SUFFIX)).read_text(encoding="utf-8") == "規約 v3\n"
 
 
 def test_記録のない古い版で入れたものは_違えば人が直したものとして扱う(tdir, target):

@@ -75,6 +75,7 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
         f"人が直しているので上書きしていない（新しいテンプレートを {NEW_SUFFIX} に置いた。手で合わせて消す）",
         plan.conflicts,
     )
+    _print_list("人が直したまま（テンプレートは前回の upgrade から変わっていない）", plan.kept)
     _print_list("人が消しているので戻していない", plan.deleted_by_user)
     _print_list("テンプレートから消えた（消すかは人が決める）", plan.gone_from_template)
     print(f"変わらない：{len(plan.current)}件")

@@ -4,6 +4,7 @@
 - ない（入れたことがない）           → 足す
 - 入れたまま触っていない             → 新しいテンプレートに入れ替える
 - 人が直した（入れたときと違う）     → 上書きしない。新しいテンプレートを <ファイル>.harness-new に置く
+- 人が直したまま、テンプレートが前回の upgrade から変わっていない → そのまま（毎回は知らせない）
 - 人が消した                         → 戻さない
 - テンプレートから消えた             → 知らせるだけ（消すかは人が決める）
 入れたときの記録がない（古い版で入れた）ファイルは、テンプレートと同じでなければ「人が直した」として扱う。
@@ -30,6 +31,7 @@ class UpgradePlan:
     updated: List[str] = field(default_factory=list)
     current: List[str] = field(default_factory=list)
     conflicts: List[str] = field(default_factory=list)
+    kept: List[str] = field(default_factory=list)
     deleted_by_user: List[str] = field(default_factory=list)
     gone_from_template: List[str] = field(default_factory=list)
     notes: List[str] = field(default_factory=list)
@@ -44,6 +46,7 @@ def run_upgrade(target: Path, dry_run: bool = False, tdir: Optional[Path] = None
         raise FileNotFoundError(f"{MANIFEST} がありません。先に harness init を実行してください")
     manifest = json.loads(mpath.read_text(encoding="utf-8"))
     base: Dict[str, str] = dict(manifest.get("files") or {})
+    seen: Dict[str, str] = dict(manifest.get("template_seen") or {})  # 人が直したファイルで、前回見せたテンプレート
     layers: List[str] = list(manifest.get("layers") or [])
     plan = UpgradePlan(from_version=str(manifest.get("version", "?")))
     if "files" not in manifest:
@@ -53,6 +56,7 @@ def run_upgrade(target: Path, dry_run: bool = False, tdir: Optional[Path] = None
 
     files = template_files(tdir, layers)
     recorded: Dict[str, str] = {}
+    shown: Dict[str, str] = {}
     for rel, src in files.items():
         new = src.read_bytes()
         new_d = digest(new)
@@ -74,16 +78,28 @@ def run_upgrade(target: Path, dry_run: bool = False, tdir: Optional[Path] = None
             plan.updated.append(rel)
             _write(dst, new, dry_run, rel)
             recorded[rel] = new_d
+        elif seen.get(rel) == new_d:
+            plan.kept.append(rel)
+            shown[rel] = new_d
+            if rel in base:
+                recorded[rel] = base[rel]
         else:
             plan.conflicts.append(rel)
             _write(dst.with_name(dst.name + NEW_SUFFIX), new, dry_run, rel)
+            shown[rel] = new_d
             if rel in base:
                 recorded[rel] = base[rel]  # 人が合わせるまで、入れたときの中身を覚えておく
     plan.gone_from_template = sorted(set(base) - set(files))
 
     _merge_gitignore(target, plan, dry_run)  # type: ignore[arg-type]
     if not dry_run:
-        manifest.update({"version": __version__, "files": dict(sorted(recorded.items()))})
+        manifest.update(
+            {
+                "version": __version__,
+                "files": dict(sorted(recorded.items())),
+                "template_seen": dict(sorted(shown.items())),
+            }
+        )
         mpath.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return plan
 
