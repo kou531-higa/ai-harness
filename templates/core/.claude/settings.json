@@ -38,7 +38,13 @@
       "Read(./.env)",
       "Read(./.env.*)",
       "Edit(./infra/envs/prod/**)",
-      "Write(./infra/envs/prod/**)"
+      "Write(./infra/envs/prod/**)",
+      "Bash(make merge:*)",
+      "Bash(python3 scripts/merge_pr.py:*)",
+      "Bash(git push origin main:*)",
+      "Bash(git push --no-verify:*)",
+      "Edit(./scripts/git-hooks/**)",
+      "Write(./scripts/git-hooks/**)"
     ]
   },
   "hooks": {

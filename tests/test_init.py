@@ -97,3 +97,19 @@ def test_labelsは10の理由と判断待ちを作る(capsys):
     assert out.count("ai-stop:") == 10
     assert "needs-decision" in out
     assert "--force" in out
+
+
+def test_prepushフックを入れる(target):
+    run_init(target)
+    hook = target / ".git/hooks/pre-push"
+    assert hook.exists()
+    assert hook.stat().st_mode & 0o100
+
+
+def test_既にあるprepushフックは残す(target):
+    hook = target / ".git/hooks/pre-push"
+    hook.parent.mkdir(parents=True, exist_ok=True)
+    hook.write_text("#!/bin/sh\necho mine\n", encoding="utf-8")
+    plan = run_init(target)
+    assert "mine" in hook.read_text(encoding="utf-8")
+    assert any("既にある" in n for n in plan.notes)
