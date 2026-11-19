@@ -29,6 +29,7 @@ AI と人の共通の規約。毎回の会話で読み込まれるので、**消
 - 戻せない操作（本番の設定、データの削除や補正、適用済みのマイグレーション）
 - レビューで、重要な所が「未カバー」になった
 
+決まりの一覧（`docs/decisions/rules.md`）で答えが出る論点は戻さず、決まりに従って ID を PR と仕様に書く。
 戻すときは `/decision-memo` で判断チケットを起票する（論点／選択肢1〜3／影響／推奨）。
 ラベル `ai-stop:<理由>` を必ず付ける。理由は次から選ぶ：
 `spec-undecided` `spec-conflict` `customer-agreement` `two-failures` `shared-component`
@@ -65,4 +66,4 @@ AI と人の共通の規約。毎回の会話で読み込まれるので、**消
 
 ## 7. つまずきやすい点
 
-<!-- このプロジェクト固有の落とし穴を1行ずつ。AI の失敗から育てる（/harness-rule） -->
+<!-- このプロジェクト固有の落とし穴を1行ずつ。AI の失敗から育てる。人の判断の基準は /harness-rule で docs/decisions/rules.md へ -->
