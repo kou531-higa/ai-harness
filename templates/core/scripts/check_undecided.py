@@ -38,6 +38,8 @@ MARKERS = [
 DECISION_LINK_RE = re.compile(r"decision:\s*#\d+")
 AC_ID_RE = re.compile(r"^AC-\d{3}-\d+\b")
 STATUSES_REQUIRING_APPROVAL = {"review", "approved"}
+# 印に見えるが未確定ではない行（状態名の「確認待ち」など）。人が行末に書いて外す
+IGNORE_RE = re.compile(r"<!--\s*undecided:\s*ignore\s*-->")
 
 
 @dataclass
@@ -122,7 +124,7 @@ def analyze(path: Path) -> SpecReport:
                 ac_items[-1][2] += " " + stripped  # 継続行
 
         kind = next((k for k, rx in MARKERS if rx.search(line)), None)
-        if kind:  # 1行に複数あっても1件と数える
+        if kind and not IGNORE_RE.search(line):  # 1行に複数あっても1件と数える
             report.markers.append(
                 Marker(
                     line_no=line_no,

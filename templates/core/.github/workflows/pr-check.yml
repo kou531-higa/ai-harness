@@ -36,12 +36,19 @@ jobs:
           else
             echo "docs/specs がないので飛ばします"
           fi
-      - name: 仕様どうしの食い違い（機能一覧・画面仕様・遷移図・ユースケース）
+      - name: 仕様どうしの食い違い（新しく増えたものだけで止める）
         run: |
           if [ -f docs/specs/functions.md ]; then
-            python3 scripts/check_spec_consistency.py docs/specs
+            python3 scripts/check_spec_consistency.py docs/specs --baseline docs/specs/consistency-baseline.json
           else
             echo "機能一覧（docs/specs/functions.md）がないので飛ばします"
+          fi
+      - name: 未決事項台帳が仕様と合っている
+        run: |
+          if [ -f docs/decisions/undecided.md ]; then
+            python3 scripts/undecided_ledger.py --check
+          else
+            echo "未決事項台帳（docs/decisions/undecided.md）がないので飛ばします"
           fi
 
   check:
