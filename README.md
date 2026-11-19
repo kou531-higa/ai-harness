@@ -27,6 +27,17 @@ uvx --from git+https://github.com/kou531-higa/ai-harness harness init
 uvx --from git+https://github.com/kou531-higa/ai-harness harness labels   # AI が止まった理由のラベル
 ```
 
+テンプレートが更新されたら、導入先で `harness upgrade` を実行します。
+
+```
+uvx --from git+https://github.com/kou531-higa/ai-harness harness upgrade --dry-run
+uvx --from git+https://github.com/kou531-higa/ai-harness harness upgrade
+```
+
+- 入れたまま触っていないファイルは、新しいテンプレートに入れ替えます
+- 人が直したファイル（`CLAUDE.md` など）は上書きせず、新しいテンプレートを `<ファイル>.harness-new` に置きます。差分を見て手で合わせ、`.harness-new` を消します
+- 人が消したファイルは戻しません。テンプレートから消えたファイルは、知らせるだけです
+
 - 層（`web`・`api`・`batch`・`db`・`e2e`）は、ディレクトリがあるものだけ規約を入れます
 - main への直接の push を止める pre-push フックと、検査がすべて緑のときだけマージする `scripts/merge_pr.py` が入ります（ブランチ保護が使えない無料プランの非公開リポジトリ向け）
 

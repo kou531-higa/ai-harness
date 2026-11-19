@@ -1,6 +1,7 @@
 """harness コマンド。
 
 harness init [導入先] [--layers web,api] [--force] [--dry-run] [--no-git-hook]
+harness upgrade [導入先] [--dry-run]
 harness labels [--repo OWNER/REPO] [--dry-run]
 harness version
 """
@@ -17,6 +18,7 @@ from typing import List, Optional
 from . import __version__
 from .init import run_init
 from .labels import gh_commands
+from .upgrade import NEW_SUFFIX, run_upgrade
 
 NEXT_STEPS = """
 次にすること（人が行う）
@@ -58,6 +60,32 @@ def cmd_init(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_upgrade(args: argparse.Namespace) -> int:
+    try:
+        plan = run_upgrade(Path(args.target), dry_run=args.dry_run)
+    except FileNotFoundError as e:
+        print(f"harness upgrade: {e}", file=sys.stderr)
+        return 2
+    if args.dry_run:
+        print("（試しに実行：ファイルは変えていません）")
+    print(f"版：{plan.from_version} → {__version__}")
+    _print_list("足した", plan.added)
+    _print_list("新しいテンプレートに入れ替えた（入れたまま触っていなかった）", plan.updated)
+    _print_list(
+        f"人が直しているので上書きしていない（新しいテンプレートを {NEW_SUFFIX} に置いた。手で合わせて消す）",
+        plan.conflicts,
+    )
+    _print_list("人が直したまま（テンプレートは前回の upgrade から変わっていない）", plan.kept)
+    _print_list("人が消しているので戻していない", plan.deleted_by_user)
+    _print_list("テンプレートから消えた（消すかは人が決める）", plan.gone_from_template)
+    print(f"変わらない：{len(plan.current)}件")
+    for note in plan.notes:
+        print(f"- {note}")
+    if plan.conflicts:
+        print(f"手で合わせるもの：{len(plan.conflicts)}件。例：diff -u <ファイル> <ファイル>{NEW_SUFFIX}")
+    return 0
+
+
 def cmd_labels(args: argparse.Namespace) -> int:
     for cmd in gh_commands(args.repo or ""):
         if args.dry_run:
@@ -82,6 +110,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     p.add_argument("--dry-run", action="store_true", help="何が変わるかだけを出す")
     p.add_argument("--no-git-hook", action="store_true", help="pre-push フックを入れない")
     p.set_defaults(func=cmd_init)
+
+    p = sub.add_parser(
+        "upgrade", help="入れたあとに更新されたテンプレートを取り込む（人が直したファイルは上書きしない）"
+    )
+    p.add_argument("target", nargs="?", default=".")
+    p.add_argument("--dry-run", action="store_true", help="何が変わるかだけを出す")
+    p.set_defaults(func=cmd_upgrade)
 
     p = sub.add_parser("labels", help="AI が止まった理由のラベルを GitHub に作る")
     p.add_argument("--repo", help="OWNER/REPO。省略すると今のリポジトリ")

@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -20,7 +21,7 @@ from . import __version__
 
 LAYERS = ["web", "api", "batch", "db", "e2e"]
 IGNORE_NAMES = {"__pycache__", ".DS_Store"}
-GITIGNORE_LINES = [".harness/", ".claude/settings.local.json", "CLAUDE.local.md"]
+GITIGNORE_LINES = [".harness/", ".claude/settings.local.json", "CLAUDE.local.md", "*.harness-new"]
 MANIFEST = ".claude/harness.json"
 PRE_PUSH_SRC = "scripts/git-hooks/pre-push"
 
@@ -47,6 +48,19 @@ def _files(src: Path) -> List[Path]:
     for p in sorted(src.rglob("*")):
         if p.is_file() and not (set(p.relative_to(src).parts) & IGNORE_NAMES) and p.suffix != ".pyc":
             out.append(p)
+    return out
+
+
+def digest(data: bytes) -> str:
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def template_files(tdir: Path, layers: List[str]) -> Dict[str, Path]:
+    """導入先での置き場所 → テンプレートのファイル"""
+    core = tdir / "core"
+    out = {src.relative_to(core).as_posix(): src for src in _files(core)}
+    for name in layers:
+        out[f"{name}/CLAUDE.md"] = tdir / "layers" / name / "CLAUDE.md"
     return out
 
 
@@ -116,28 +130,35 @@ def _install_pre_push(target: Path, plan: Plan, force: bool, dry_run: bool) -> N
 
 
 def run_init(
-    target: Path, layers: Optional[List[str]] = None, force: bool = False, dry_run: bool = False, git_hook: bool = True
+    target: Path,
+    layers: Optional[List[str]] = None,
+    force: bool = False,
+    dry_run: bool = False,
+    git_hook: bool = True,
+    tdir: Optional[Path] = None,
 ) -> Plan:
     target = target.resolve()
-    tdir = templates_dir()
+    tdir = tdir or templates_dir()
     plan = Plan()
     chosen = detect_layers(target) if layers is None else layers
     for name in chosen:
         if name not in LAYERS:
             raise ValueError(f"知らない層です：{name}（使えるのは {', '.join(LAYERS)}）")
 
-    core = tdir / "core"
-    for src in _files(core):
-        rel = src.relative_to(core).as_posix()
-        _copy(src, target / rel, rel, plan, force, dry_run)
-    for name in chosen:
-        src = tdir / "layers" / name / "CLAUDE.md"
-        rel = f"{name}/CLAUDE.md"
+    files = template_files(tdir, chosen)
+    for rel, src in files.items():
         _copy(src, target / rel, rel, plan, force, dry_run)
 
     _merge_gitignore(target, plan, dry_run)
 
-    manifest: Dict[str, object] = {"version": __version__, "layers": chosen}
+    # テンプレートのまま入れたファイルの中身を覚えておく（harness upgrade が、人が直したかを見分けるため）
+    installed = {}
+    for rel, src in files.items():
+        dst = target / rel
+        data = src.read_bytes()
+        if dry_run or (dst.exists() and dst.read_bytes() == data):
+            installed[rel] = digest(data)
+    manifest: Dict[str, object] = {"version": __version__, "layers": chosen, "files": installed}
     mpath = target / MANIFEST
     if not dry_run:
         mpath.parent.mkdir(parents=True, exist_ok=True)
