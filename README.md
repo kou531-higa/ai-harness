@@ -57,13 +57,19 @@ uvx --from git+https://github.com/kou531-higa/ai-harness harness upgrade
 - 人が直したファイル（`CLAUDE.md` など）は上書きせず、新しいテンプレートを `<ファイル>.harness-new` に置きます。差分を見て手で合わせ、`.harness-new` を消します
 - 人が消したファイルは戻しません。テンプレートから消えたファイルは、知らせるだけです
 
+今のリポジトリが、AI の効果を引き出す土台をどれだけ持っているかを診断します（DORA の AI の7つの能力。各0〜3点、根拠つき）。
+
+```
+uvx --from git+https://github.com/kou531-higa/ai-harness harness doctor --out doctor.md
+```
+
 - 層（`web`・`api`・`batch`・`db`・`e2e`）は、ディレクトリがあるものだけ規約を入れます
 - main への直接の push を止める pre-push フックと、検査がすべて緑のときだけマージする `scripts/merge_pr.py` が入ります（ブランチ保護が使えない無料プランの非公開リポジトリ向け）
 
 ## 予定
 
 - **P1（済み）**：上の一式、`harness upgrade`、サンプルアプリでの検証
-- **P2**：`harness doctor`（7観点の診断）、`harness stats`（止まった理由と DORA 指標）、4週間の運用記録
+- **P2**：`harness doctor`（済み）、`harness stats`（止まった理由と DORA 指標）、4週間の運用記録
 - **P3**：IaC、デプロイとロールバック、SLOアラーム、障害対応
 - **P4**：GitLab CI、Bedrock、Jira / Backlog への対応
 

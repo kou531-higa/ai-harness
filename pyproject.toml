@@ -37,3 +37,8 @@ target-version = "py38"  # フックとスクリプトは導入先の古い Pyth
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
 ignore = ["UP006", "UP007", "UP035", "UP045"]  # typing.List などを 3.8 互換のため許す
+
+[tool.ruff.lint.per-file-ignores]
+# 診断の基準は、1行に1つ並べて表のように読めるようにしている
+"src/ai_harness/doctor.py" = ["E501"]
+"tests/test_doctor.py" = ["E501"]

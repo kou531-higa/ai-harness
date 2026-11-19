@@ -2,6 +2,7 @@
 
 harness init [導入先] [--layers web,api] [--force] [--dry-run] [--no-git-hook]
 harness upgrade [導入先] [--dry-run]
+harness doctor [対象] [--repo OWNER/REPO] [--out FILE]
 harness labels [--repo OWNER/REPO] [--dry-run]
 harness version
 """
@@ -16,6 +17,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from . import __version__
+from .doctor import diagnose, render
 from .init import run_init
 from .labels import gh_commands
 from .upgrade import NEW_SUFFIX, run_upgrade
@@ -86,6 +88,17 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_doctor(args: argparse.Namespace) -> int:
+    root = Path(args.target)
+    text = render(diagnose(root, repo=args.repo), root.resolve())
+    if args.out:
+        Path(args.out).write_text(text, encoding="utf-8")
+        print(f"書きました：{args.out}")
+    else:
+        print(text, end="")
+    return 0
+
+
 def cmd_labels(args: argparse.Namespace) -> int:
     for cmd in gh_commands(args.repo or ""):
         if args.dry_run:
@@ -117,6 +130,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     p.add_argument("target", nargs="?", default=".")
     p.add_argument("--dry-run", action="store_true", help="何が変わるかだけを出す")
     p.set_defaults(func=cmd_upgrade)
+
+    p = sub.add_parser("doctor", help="リポジトリを DORA の AI の7つの能力で 0〜3点に診断する（根拠つき）")
+    p.add_argument("target", nargs="?", default=".")
+    p.add_argument("--repo", help="PR を読む OWNER/REPO。省略すると今のリポジトリ")
+    p.add_argument("--out", help="Markdown を書くファイル。省略すると画面に出す")
+    p.set_defaults(func=cmd_doctor)
 
     p = sub.add_parser("labels", help="AI が止まった理由のラベルを GitHub に作る")
     p.add_argument("--repo", help="OWNER/REPO。省略すると今のリポジトリ")
