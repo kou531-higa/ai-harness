@@ -25,7 +25,11 @@
       "Bash(gh pr diff:*)",
       "Bash(gh pr create:*)",
       "Bash(terraform validate:*)",
-      "Bash(terraform fmt:*)"
+      "Bash(terraform fmt:*)",
+      "Bash(gh pr comment:*)",
+      "Bash(gh pr checkout:*)",
+      "Bash(python3 scripts/review_route.py:*)",
+      "Bash(python3 scripts/impact.py:*)"
     ],
     "deny": [
       "Bash(terraform apply:*)",
