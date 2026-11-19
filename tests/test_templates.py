@@ -124,3 +124,20 @@ def test_変える前に今の振る舞いを固定する(name):
 def test_decision_memoは決定者マップを使う():
     text = (CORE / ".claude" / "skills" / "decision-memo" / "SKILL.md").read_text(encoding="utf-8")
     assert "docs/decisions/owners.md" in text
+
+
+AGENTS = sorted((CORE / ".claude" / "agents").glob("*.md"))
+
+
+@pytest.mark.parametrize("agent", AGENTS, ids=lambda p: p.stem)
+def test_レビュー役は読むだけ(agent):
+    fm = frontmatter(agent)
+    assert fm["name"] == agent.stem
+    assert fm["description"]
+    tools = {t.strip() for t in fm["tools"].split(",")}
+    assert not tools & {"Edit", "Write", "MultiEdit", "NotebookEdit"}
+
+
+def test_仕様レビュー役がある():
+    assert (CORE / ".claude" / "agents" / "spec-reviewer.md").exists()
+    assert (CORE / ".claude" / "skills" / "spec-review" / "SKILL.md").exists()
