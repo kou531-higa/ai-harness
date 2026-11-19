@@ -102,7 +102,13 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 def cmd_stats(args: argparse.Namespace) -> int:
     root = Path(args.target)
-    text = stats.render(stats.collect(root, since_days=args.since, repo=args.repo), root.resolve())
+    st = stats.collect(root, since_days=args.since, repo=args.repo)
+    text = stats.render(st, root.resolve())
+    if args.html:
+        out = Path(args.html)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(stats.render_html(st, root.resolve()), encoding="utf-8")
+        print(f"書きました：{args.html}")
     if args.out:
         Path(args.out).write_text(text, encoding="utf-8")
         print(f"書きました：{args.out}")
@@ -154,6 +160,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     p.add_argument("--since", type=int, default=28, help="何日前から数えるか（既定 28日）")
     p.add_argument("--repo", help="OWNER/REPO。省略すると対象のリポジトリ")
     p.add_argument("--out", help="Markdown を書くファイル。省略すると画面に出す")
+    p.add_argument("--html", help="ダッシュボード（1枚の HTML）を書くファイル。例：docs/metrics/index.html")
     p.set_defaults(func=cmd_stats)
 
     p = sub.add_parser("labels", help="AI が止まった理由のラベルを GitHub に作る")

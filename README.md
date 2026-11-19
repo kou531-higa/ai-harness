@@ -61,7 +61,7 @@ uvx --from git+https://github.com/kou531-higa/ai-harness harness upgrade
 
 ```
 uvx --from git+https://github.com/kou531-higa/ai-harness harness doctor --out doctor.md
-uvx --from git+https://github.com/kou531-higa/ai-harness harness stats --since 28   # 届ける力とハーネスの指標（PR・Issue・フックの記録から）
+uvx --from git+https://github.com/kou531-higa/ai-harness harness stats --since 28 --html docs/metrics/index.html   # 届ける力とハーネスの指標（PR・Issue・フックの記録から）。--html でダッシュボード
 ```
 
 - 層（`web`・`api`・`batch`・`db`・`e2e`）は、ディレクトリがあるものだけ規約を入れます
@@ -70,7 +70,7 @@ uvx --from git+https://github.com/kou531-higa/ai-harness harness stats --since 2
 ## 予定
 
 - **P1（済み）**：上の一式、`harness upgrade`、サンプルアプリでの検証
-- **P2**：`harness doctor`・`harness stats`（済み）、ダッシュボード、4週間の運用記録
+- **P2**：`harness doctor`・`harness stats`・ダッシュボード（済み）、4週間の運用記録
 - **P3**：IaC、デプロイとロールバック、SLOアラーム、障害対応
 - **P4**：GitLab CI、Bedrock、Jira / Backlog への対応
 
