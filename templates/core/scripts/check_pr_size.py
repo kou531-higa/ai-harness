@@ -55,8 +55,14 @@ def numstat(base: str) -> List[Tuple[int, int, str]]:
     return rows
 
 
+# テストは、名前が生成物の形に当たっても必ず数える
+TEST_NAMES = ["test_*", "*_test.py", "*.spec.*", "*.test.*", "*.db-spec.*"]
+
+
 def is_excluded(path: str, patterns: List[str]) -> bool:
     name = path.rsplit("/", 1)[-1]
+    if any(fnmatch.fnmatchcase(name, t) for t in TEST_NAMES):
+        return False
     return any(fnmatch.fnmatchcase(path, p) or fnmatch.fnmatchcase(name, p) for p in patterns)
 
 

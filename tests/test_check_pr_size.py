@@ -88,9 +88,10 @@ def test_名前で生成物と分かるファイルは数えない(repo):
     add_lines(repo, "db/procedures/fn_catalog.generated.sql", 1000)
     add_lines(repo, "batch/core/catalog_generated.py", 1000)
     add_lines(repo, "api/app/generated_note.py", 10)  # 名前の途中に generated があるだけのものは数える
+    add_lines(repo, "batch/tests/test_catalog_generated.py", 20)  # テストは生成物の形でも数える
     r = run(repo)
     assert r.returncode == 0, r.stdout
-    assert "変更行数: 10" in r.stdout
+    assert "変更行数: 30" in r.stdout
     assert "数えなかったファイル 3件" in r.stdout
 
 
