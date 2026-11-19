@@ -50,6 +50,17 @@ def test_フックの記録を数え_なければ測れないと書く(tmp_path:
     assert st.hook_stops == {"protect-paths": 2}
 
 
+def test_週ごとの推移とダッシュボード(tmp_path: Path):
+    st = stats.collect(tmp_path, since_days=28, gh=fake, now=NOW)
+    by_week = {w: (m, s) for w, m, s in st.weekly}
+    assert by_week["2026-11-09"] == (2, 1)  # 11-09（月）の週：マージ2件、ai-stop の付いた PR #2
+    assert by_week["2026-11-16"] == (0, 2)  # 11-16（月）の週：Issue #7 と PR #3
+    html = stats.render_html(st, tmp_path)
+    assert "<svg" in html and "マージした PR" in html and "spec-undecided" in html
+    empty = stats.collect(tmp_path, gh=lambda _a, _c: [], now=NOW)
+    assert "この期間は、マージした PR も AI が止まった件数も 0件" in stats.render_html(empty, tmp_path)
+
+
 def test_ghで読めなければ測れないと書く_推測で埋めない(tmp_path: Path):
     st = stats.collect(tmp_path, gh=lambda _a, _c: None, now=NOW)
     text = stats.render(st, tmp_path)

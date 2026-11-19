@@ -15,7 +15,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from .doctor import GH, default_gh
 
@@ -48,6 +48,7 @@ class Stats:
     decision_days: Optional[float] = None
     decisions_open: int = 0
     hook_stops: Dict[str, int] = field(default_factory=dict)
+    weekly: List[Tuple[str, int, int]] = field(default_factory=list)  # (週の初め, マージした PR, AI が止まった件数)
     notes: List[str] = field(default_factory=list)
 
     @property
@@ -88,6 +89,24 @@ def collect(
                 if lb.startswith("ai-stop:"):
                     stops[lb.split(":", 1)[1]] += 1
     st.ai_stops = dict(stops.most_common())
+
+    # 週ごとの推移（月曜はじまり）
+    def week(d: datetime) -> str:
+        return (d - timedelta(days=d.weekday())).strftime("%Y-%m-%d")
+
+    weeks: Dict[str, List[int]] = {}
+    d = since
+    while d <= until:
+        weeks.setdefault(week(d), [0, 0])
+        d += timedelta(days=7)
+    weeks.setdefault(week(until), [0, 0])
+    for p in merged:
+        weeks.setdefault(week(_t(p["mergedAt"])), [0, 0])[0] += 1  # type: ignore[arg-type]
+    for it in [*prs, *issues]:
+        created = _t(it["createdAt"])
+        if created and since <= created <= until and any(lb.startswith("ai-stop:") for lb in _labels(it)):
+            weeks.setdefault(week(created), [0, 0])[1] += 1
+    st.weekly = [(k, v[0], v[1]) for k, v in sorted(weeks.items())]
 
     waits = []
     for it in [*issues, *prs]:
@@ -146,3 +165,68 @@ def render(st: Stats, root: Path) -> str:
         out += ["", "## 測れなかったもの", ""] + [f"- {n}" for n in st.notes]
     out += ["", "デプロイの回数・変更失敗率・復旧時間は、本番のデータがないので PR から数えた代わりの値。"]
     return "\n".join(out) + "\n"
+
+
+CSS = """
+:root{--bg:#fff;--fg:#1d2433;--mut:#5b6475;--line:#d9dee7;--card:#f5f7fa;--a:#2f6fd0;--b:#c2410c}
+@media (prefers-color-scheme:dark){:root{--bg:#12161d;--fg:#e6e9ef;--mut:#9aa3b2;--line:#2c3340;--card:#1a1f28;--a:#7fb0ff;--b:#fb923c}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,"Hiragino Sans","Noto Sans JP",sans-serif}
+main{max-width:960px;margin:0 auto;padding:24px 16px}h1{font-size:22px;margin:0}h2{font-size:17px;margin:28px 0 8px}
+.mut{color:var(--mut);font-size:13px}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}
+.tile{background:var(--card);border-radius:8px;padding:12px}.tile b{display:block;font-size:26px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-weight:600}svg text{fill:var(--mut);font-size:11px}.wrap{overflow-x:auto}
+"""
+
+
+def _chart(weekly: List[Tuple[str, int, int]]) -> str:
+    """週ごとの棒（マージした PR と、AI が止まった件数）。数は棒の上にも書く"""
+    if not weekly:
+        return '<p class="mut">データがない</p>'
+    if all(m == 0 and s == 0 for _, m, s in weekly):
+        return '<p class="mut">この期間は、マージした PR も AI が止まった件数も 0件</p>'
+    top = max(1, *(max(m, s) for _, m, s in weekly))
+    w, h, pad = 64, 140, 20
+    bars = []
+    for i, (wk, m, s) in enumerate(weekly):
+        x = 40 + i * w
+        for j, (v, color) in enumerate(((m, "var(--a)"), (s, "var(--b)"))):
+            bh = (h - pad) * v / top
+            bx = x + j * 22
+            bars.append(
+                f'<rect x="{bx}" y="{h - bh}" width="18" height="{bh}" fill="{color}" rx="2"><title>{wk} {v}</title></rect>'
+            )
+            bars.append(f'<text x="{bx + 9}" y="{h - bh - 4}" text-anchor="middle">{v}</text>')
+        bars.append(f'<text x="{x + 20}" y="{h + 16}" text-anchor="middle">{wk[5:]}</text>')
+    width = 40 + len(weekly) * w
+    legend = '<p class="mut"><span style="color:var(--a)">■</span> マージした PR　<span style="color:var(--b)">■</span> AI が止まった件数（ai-stop）。週は月曜はじまり</p>'
+    return f'<div class="wrap"><svg width="{width}" height="{h + 24}" role="img" aria-label="週ごとの推移">{"".join(bars)}</svg></div>{legend}'
+
+
+def render_html(st: Stats, root: Path) -> str:
+    from html import escape
+
+    def tile(label: str, value: str, note: str = "") -> str:
+        return f'<div class="tile"><span class="mut">{escape(label)}</span><b>{escape(value)}</b><span class="mut">{escape(note)}</span></div>'
+
+    rows = (
+        "".join(f"<tr><td>{escape(k)}</td><td>{v}</td></tr>" for k, v in st.ai_stops.items())
+        or '<tr><td colspan="2" class="mut">0件</td></tr>'
+    )
+    hooks = "".join(f"<tr><td>{escape(k)}</td><td>{v}</td></tr>" for k, v in st.hook_stops.items())
+    hooks_html = (
+        f"<table><tr><th>フック</th><th>止めた回数</th></tr>{hooks}</table>"
+        if hooks
+        else '<p class="mut">記録がない（測れない）</p>'
+    )
+    notes = "".join(f"<li>{escape(n)}</li>" for n in st.notes)
+    body = f"""<h1>ハーネスの指標：{escape(root.name)}</h1>
+<p class="mut">{st.since:%Y-%m-%d}〜{st.until:%Y-%m-%d}。GitHub の PR・Issue と、手元のフックの記録から数えた。推測で埋めない。</p>
+<div class="tiles">{tile("マージした PR", f"{st.merged}件", f"週 {st.per_week:.1f}件")}{tile("リードタイムの中央値", _fmt(st.lead_hours, "時間"), "作成 → マージ")}{tile("PR の行数の中央値", _fmt(st.size_median, "行", 0))}{tile("判断待ち", f"{st.decisions_open}件", "まだ決まっていない")}</div>
+<h2>週ごとの推移</h2>{_chart(st.weekly)}
+<h2>AI が止まった理由</h2><table><tr><th>理由</th><th>件数</th></tr>{rows}</table>
+<h2>判断待ちが決まるまで</h2><p>決まった {st.decisions_closed}件・中央値 {escape(_fmt(st.decision_days, "日"))}</p>
+<h2>フックで止めた回数</h2>{hooks_html}
+{f"<h2>測れなかったもの</h2><ul>{notes}</ul>" if notes else ""}
+<p class="mut">デプロイの回数・変更失敗率は、本番のデータがないので PR から数えた代わりの値（修正の PR の割合 {"測れない" if st.fix_ratio is None else f"{st.fix_ratio:.0%}"}）。</p>"""
+    return f'<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ハーネスの指標</title><style>{CSS}</style></head><body><main>{body}</main></body></html>\n'
