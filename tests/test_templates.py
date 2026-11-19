@@ -46,6 +46,7 @@ def test_スキルが3つある():
         "verify",
         "spec-review",
         "review",
+        "catalog-challenge",
     }
 
 
@@ -149,6 +150,14 @@ def test_レビュー役は読むだけ(agent):
 def test_仕様レビュー役がある():
     assert (CORE / ".claude" / "agents" / "spec-reviewer.md").exists()
     assert (CORE / ".claude" / "skills" / "spec-review" / "SKILL.md").exists()
+
+
+def test_反証役はカタログの変更を崩す役で_reviewからも呼ばれる():
+    agent = (CORE / ".claude" / "agents" / "catalog-challenger.md").read_text(encoding="utf-8")
+    for way in ("重なり", "判定の抜け", "反例", "ほかの正本との食い違い", "変更が届かない所", "戻せるか"):
+        assert way in agent, way
+    review = (CORE / ".claude" / "skills" / "review" / "SKILL.md").read_text(encoding="utf-8")
+    assert "catalog-challenger" in review
 
 
 def test_割り振りの担当すべてに観点の一覧がある():
