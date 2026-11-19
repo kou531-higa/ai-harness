@@ -12,7 +12,7 @@
       "content": [
         "(?i)(password|passwd|secret|token|api[_-]?key|private[_-]?key)",
         "(?i)(customer_name|customer_phone|phone|email|address)|氏名|電話|住所|個人情報",
-        "console\\.(log|info|debug)|click\\.echo|\\bprint\\(|logger?\\.(info|debug|warn)",
+        "console\\.(log|info|debug)|click\\.echo|\\bprint\\(|\\blog(ger)?\\.(info|debug|warn|warning|error)",
         "(?i)(execute|query)\\(\\s*f?[\"'].*(\\{|\\+|%s)"
       ]
     },

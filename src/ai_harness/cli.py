@@ -31,6 +31,7 @@ NEXT_STEPS = """
        merge:
        \tpython3 scripts/merge_pr.py $(PR)
   4. harness labels で、AI が止まった理由のラベルを作る
+  5. docs/decisions/owners.md の決定者（@customer などの役の名前）を、本物のチームの名前に置き換える
 """
 
 
