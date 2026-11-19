@@ -38,7 +38,15 @@ def test_CLAUDE_mdは150行以内():
 
 
 def test_スキルが3つある():
-    assert {p.parent.name for p in SKILLS} >= {"feature", "bugfix", "decision-memo", "impact", "verify", "spec-review"}
+    assert {p.parent.name for p in SKILLS} >= {
+        "feature",
+        "bugfix",
+        "decision-memo",
+        "impact",
+        "verify",
+        "spec-review",
+        "review",
+    }
 
 
 @pytest.mark.parametrize("skill", SKILLS, ids=lambda p: p.parent.name)
@@ -141,3 +149,9 @@ def test_レビュー役は読むだけ(agent):
 def test_仕様レビュー役がある():
     assert (CORE / ".claude" / "agents" / "spec-reviewer.md").exists()
     assert (CORE / ".claude" / "skills" / "spec-review" / "SKILL.md").exists()
+
+
+def test_割り振りの担当すべてに観点の一覧がある():
+    routes = json.loads((CORE / ".claude" / "review-routes.json").read_text(encoding="utf-8"))
+    for name in list(routes["reviewers"]) + ["general"]:
+        assert (CORE / ".claude" / "review" / f"{name}.md").exists(), name
