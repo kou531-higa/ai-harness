@@ -47,6 +47,7 @@ def test_スキルが3つある():
         "spec-review",
         "review",
         "catalog-challenge",
+        "harness-rule",
     }
 
 
@@ -158,6 +159,17 @@ def test_反証役はカタログの変更を崩す役で_reviewからも呼ば�
         assert way in agent, way
     review = (CORE / ".claude" / "skills" / "review" / "SKILL.md").read_text(encoding="utf-8")
     assert "catalog-challenger" in review
+
+
+def test_決まりの一覧は_当てはまらない場合を必ず持つ():
+    rules = (CORE / "docs" / "decisions" / "rules.md").read_text(encoding="utf-8")
+    assert "| ID | 決まり | 当てはまらない場合（人へ戻す） | 元の決定 | 効く場所 |" in rules
+    skill = (CORE / ".claude" / "skills" / "harness-rule" / "SKILL.md").read_text(encoding="utf-8")
+    assert "当てはまらない場合" in skill and "採用するのは人" in skill
+    claude = (CORE / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "docs/decisions/rules.md" in claude
+    memo = (CORE / ".claude" / "skills" / "decision-memo" / "SKILL.md").read_text(encoding="utf-8")
+    assert "docs/decisions/rules.md" in memo
 
 
 def test_割り振りの担当すべてに観点の一覧がある():

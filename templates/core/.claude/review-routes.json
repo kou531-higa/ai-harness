@@ -27,6 +27,7 @@
     "web/src/lib/*",
     "batch/core/*",
     "catalog/*",
+    "docs/decisions/rules.md",
     ".github/workflows/*",
     ".claude/*"
   ]
