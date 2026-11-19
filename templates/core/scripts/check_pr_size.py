@@ -5,7 +5,7 @@
   python3 scripts/check_pr_size.py --base origin/main --max 400 --labels "$LABELS"
 
 - 数えるのは、追加行と削除行の合計
-- ロックファイル・生成物・バイナリは数えない（--exclude で追加できる）
+- ロックファイル・生成物（`*.generated.*`・`*_generated.py`）・バイナリは数えない（--exclude で追加できる）
 - 人が `size-exception` ラベルを付けた PR は、上限を超えても通す（理由を PR に書く）
 """
 
@@ -31,6 +31,8 @@ DEFAULT_EXCLUDES = [
     "*.snap",
     "*.svg",
     "docs/metrics/*",
+    "*.generated.*",  # 生成物は、正本との食い違いを別の検査（make check など）で確かめる
+    "*_generated.py",
 ]
 
 
