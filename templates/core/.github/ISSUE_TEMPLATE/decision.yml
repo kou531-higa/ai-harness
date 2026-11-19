@@ -1,0 +1,46 @@
+name: 判断事項
+description: 人が決めること（論点・選択肢・影響・推奨）
+title: "判断："
+labels: ["needs-decision"]
+body:
+  - type: textarea
+    id: issue
+    attributes:
+      label: 論点
+      description: 何を決めるか。1〜2行
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: 選択肢と影響
+      description: 案ごとに、工数・戻せるか・リスク
+      placeholder: |
+        - 案1 50件：工数0.5日／戻せる／現行画面と同じ
+        - 案2 100件：工数0.5日／戻せる／性能試験の追加が必要
+    validations:
+      required: true
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: 推奨と根拠
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: 決定者
+      placeholder: "@name"
+    validations:
+      required: true
+  - type: input
+    id: due
+    attributes:
+      label: 期限
+      description: 既定は2営業日後
+    validations:
+      required: true
+  - type: textarea
+    id: links
+    attributes:
+      label: 関連（仕様・PR・チケット）
