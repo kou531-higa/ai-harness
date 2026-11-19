@@ -19,3 +19,5 @@ existing:db/migrations/**
 .claude/harness.json
 scripts/git-hooks/**
 scripts/merge_pr.py
+.claude/forbidden-patterns.json
+.claude/review-routes.json

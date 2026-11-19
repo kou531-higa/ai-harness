@@ -36,6 +36,17 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: python3 scripts/review_route.py --base "origin/${BASE_REF}" --strict | tee -a "$GITHUB_STEP_SUMMARY"
 
+  forbidden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 禁止パターン（追加した行だけ）
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 scripts/check_forbidden.py --base "origin/${BASE_REF}"
+
   specs:
     runs-on: ubuntu-latest
     steps:
