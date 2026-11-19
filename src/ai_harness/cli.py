@@ -3,6 +3,7 @@
 harness init [導入先] [--layers web,api] [--force] [--dry-run] [--no-git-hook]
 harness upgrade [導入先] [--dry-run]
 harness doctor [対象] [--repo OWNER/REPO] [--out FILE]
+harness stats [対象] [--since 28] [--repo OWNER/REPO] [--out FILE]
 harness labels [--repo OWNER/REPO] [--dry-run]
 harness version
 """
@@ -16,7 +17,7 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from . import __version__
+from . import __version__, stats
 from .doctor import diagnose, render
 from .init import run_init
 from .labels import gh_commands
@@ -99,6 +100,17 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_stats(args: argparse.Namespace) -> int:
+    root = Path(args.target)
+    text = stats.render(stats.collect(root, since_days=args.since, repo=args.repo), root.resolve())
+    if args.out:
+        Path(args.out).write_text(text, encoding="utf-8")
+        print(f"書きました：{args.out}")
+    else:
+        print(text, end="")
+    return 0
+
+
 def cmd_labels(args: argparse.Namespace) -> int:
     for cmd in gh_commands(args.repo or ""):
         if args.dry_run:
@@ -136,6 +148,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     p.add_argument("--repo", help="PR を読む OWNER/REPO。省略すると今のリポジトリ")
     p.add_argument("--out", help="Markdown を書くファイル。省略すると画面に出す")
     p.set_defaults(func=cmd_doctor)
+
+    p = sub.add_parser("stats", help="届ける力（PR から数える DORA の代わりの値）とハーネスの指標を数える")
+    p.add_argument("target", nargs="?", default=".")
+    p.add_argument("--since", type=int, default=28, help="何日前から数えるか（既定 28日）")
+    p.add_argument("--repo", help="OWNER/REPO。省略すると対象のリポジトリ")
+    p.add_argument("--out", help="Markdown を書くファイル。省略すると画面に出す")
+    p.set_defaults(func=cmd_stats)
 
     p = sub.add_parser("labels", help="AI が止まった理由のラベルを GitHub に作る")
     p.add_argument("--repo", help="OWNER/REPO。省略すると今のリポジトリ")

@@ -42,3 +42,5 @@ ignore = ["UP006", "UP007", "UP035", "UP045"]  # typing.List などを 3.8 互�
 # 診断の基準は、1行に1つ並べて表のように読めるようにしている
 "src/ai_harness/doctor.py" = ["E501"]
 "tests/test_doctor.py" = ["E501"]
+"tests/test_stats.py" = ["E501"]
+"src/ai_harness/stats.py" = ["E501"]
