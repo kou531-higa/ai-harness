@@ -32,7 +32,7 @@ disable-model-invocation: true
 - 原因の説明に根拠があり、ほかの場所の同じ書き方を一覧にしてある
 - `make check` が通っている
 
-## 止まって人へ戻す条件（/decision-memo、ラベル ai-stop:<理由>）
+## 止まって人へ戻す条件（/decision-memo の型で判断チケットを起票する。ラベル ai-stop:<理由>）
 
 | 状況 | 理由 |
 |---|---|

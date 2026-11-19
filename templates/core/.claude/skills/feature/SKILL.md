@@ -37,7 +37,7 @@ disable-model-invocation: true
 - AC すべてにテストがあり、`make check` と画面のテストが通っている
 - PR の「人が判断すべき点」と「証拠」が埋まっている
 
-## 止まって人へ戻す条件（/decision-memo、ラベル ai-stop:<理由>）
+## 止まって人へ戻す条件（/decision-memo の型で判断チケットを起票する。ラベル ai-stop:<理由>）
 
 | 状況 | 理由 |
 |---|---|

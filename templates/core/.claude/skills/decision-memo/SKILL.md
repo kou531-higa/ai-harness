@@ -7,6 +7,8 @@ disable-model-invocation: true
 
 # /decision-memo：判断メモ
 
+> このスキルは人が呼ぶ（AI からは呼べない設定）。AI が止まって人へ戻すときは、このスキルを呼ばずに、下の手順と型で `gh issue create` して起票してよい。起票はしても、決めない。
+
 論点：$ARGUMENTS
 
 ## 手順
