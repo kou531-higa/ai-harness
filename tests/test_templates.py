@@ -14,6 +14,8 @@ SKILLS = sorted((CORE / ".claude" / "skills").glob("*/SKILL.md"))
 AI_STOP_REASONS = {
     "spec-undecided",
     "spec-conflict",
+    "customer-agreement",
+    "uncovered",
     "two-failures",
     "shared-component",
     "pr-too-large",
@@ -99,3 +101,26 @@ def test_PRテンプレートに判断すべき点と証拠がある():
     text = (CORE / ".github" / "pull_request_template.md").read_text(encoding="utf-8")
     assert "## 人が判断すべき点" in text
     assert "## 証拠" in text
+
+
+def test_CLAUDE_mdは理由の一覧をすべて載せる():
+    text = (CORE / "CLAUDE.md").read_text(encoding="utf-8")
+    for reason in AI_STOP_REASONS:
+        assert f"`{reason}`" in text, reason
+
+
+def test_featureは大きい変更のときだけ計画の承認を待つ():
+    text = (CORE / ".claude" / "skills" / "feature" / "SKILL.md").read_text(encoding="utf-8")
+    assert "大きい変更のときだけ" in text
+    assert "400行を超えそう" in text
+
+
+@pytest.mark.parametrize("name", ["feature", "bugfix"])
+def test_変える前に今の振る舞いを固定する(name):
+    text = (CORE / ".claude" / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+    assert "今の振る舞いを固定する" in text
+
+
+def test_decision_memoは決定者マップを使う():
+    text = (CORE / ".claude" / "skills" / "decision-memo" / "SKILL.md").read_text(encoding="utf-8")
+    assert "docs/decisions/owners.md" in text
