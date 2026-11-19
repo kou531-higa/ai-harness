@@ -76,3 +76,30 @@ def test_node_modulesのツールを優先する(project, tmp_path_factory):
     r = project.run_hook(HOOK, write_payload(f), env_with(bin_dir))
     assert r.returncode == 2
     assert "local eslint error" in r.stderr
+
+
+def test_ファイルに一番近い層のツールをその層で実行する(project, tmp_path_factory):
+    bin_dir = tmp_path_factory.mktemp("bin")
+    fake_tool(bin_dir, "eslint", "exit 0")
+    for layer in ("web", "api"):
+        layer_bin = project.path / layer / "node_modules" / ".bin"
+        layer_bin.mkdir(parents=True)
+        fake_tool(layer_bin, "eslint", f'if [ "$1" != --fix ]; then echo "{layer} eslint: $(pwd) $@"; exit 1; fi')
+    f = project.write("api/src/requests/requests.service.ts", "export const x = 1\n")
+    r = project.run_hook(HOOK, write_payload(f), env_with(bin_dir))
+    assert r.returncode == 2
+    assert "api eslint" in r.stderr
+    assert "web eslint" not in r.stderr
+    assert "src/requests/requests.service.ts" in r.stderr  # 層からの相対パスで渡す
+    assert "（api で実行）" in r.stderr
+
+
+def test_Pythonは層の_venvのruffを使う(project, tmp_path_factory):
+    bin_dir = tmp_path_factory.mktemp("bin")
+    venv_bin = project.path / "batch" / ".venv" / "bin"
+    venv_bin.mkdir(parents=True)
+    fake_tool(venv_bin, "ruff", 'if [ "$1" = check ] && [ "$2" != --fix ]; then echo "batch ruff"; exit 1; fi; exit 0')
+    f = project.write("batch/commands/import_requests.py", "import os\n")
+    r = project.run_hook(HOOK, write_payload(f), env_with(bin_dir))
+    assert r.returncode == 2
+    assert "batch ruff" in r.stderr
