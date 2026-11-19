@@ -4,6 +4,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location(
     "check_undecided", ROOT / "templates" / "core" / "scripts" / "check_undecided.py"
@@ -102,3 +104,37 @@ def test_判断チケットへのリンクを認識(tmp_path):
 def test_テンプレートは飛ばす(tmp_path):
     write(tmp_path, GOOD.replace("受注0件", "TBD"), name="_template.md")
     assert cu.main([str(tmp_path), "--require", "approved"]) == 0
+
+
+@pytest.mark.parametrize(
+    "text,kind",
+    [
+        ("件数は TBD", "TBD"),
+        ("上限は要確認", "要確認"),
+        ("扱いは【保留】", "保留"),
+        ("保留：取引先と相談中", "保留"),
+        ("TODO 文字コードを決める", "TODO"),
+        ("顧客の確認待ち", "確認待ち"),
+        ("（この節は書きかけ）", "書きかけ"),
+    ],
+)
+def test_5つの印を種類つきで拾う(tmp_path, text, kind):
+    r = cu.analyze(write(tmp_path, GOOD.replace("受注0件", text)))
+    assert [m.kind for m in r.markers] == [kind]
+
+
+@pytest.mark.parametrize("text", ["状態が保留の依頼は除く", "保留中の依頼", "TODOS は単語の一部", "TBDX"])
+def test_状態の名前の保留や単語の一部は拾わない(tmp_path, text):
+    r = cu.analyze(write(tmp_path, GOOD.replace("受注0件", text)))
+    assert r.markers == []
+
+
+def test_JSONで台帳に入れる形を出す(tmp_path, capsys):
+    import json
+
+    write(tmp_path, GOOD.replace("受注0件", "件数は TBD"))
+    assert cu.main([str(tmp_path), "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["count"] == 1
+    item = data["items"][0]
+    assert item["kind"] == "TBD" and item["spec"] == "SPEC-001" and item["ac"] == "AC-001-1"

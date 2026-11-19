@@ -3,9 +3,13 @@
 
   python scripts/check_undecided.py docs/specs                     一覧を出すだけ（exit 0）
   python scripts/check_undecided.py docs/specs --require approved  承認に必要な条件を満たさなければ exit 1
+  python scripts/check_undecided.py docs/specs --json              一覧を JSON で出す（未決事項台帳に入れる）
+
+未確定の印は5種類（プレイブック15枚目）：TBD／要確認・保留／TODO／確認待ち／書きかけ（ほかに 未定・???）。
+「保留」は業務の状態の名前にも使われるので、【保留】（保留）[保留] 保留： のような印の書き方のときだけ拾う。
 
 --require approved では、status が review か approved の仕様に対して次を求める。
-  - 未確定マーカー（TBD・要確認・保留・未定・???）が0件
+  - 未確定の印が0件
   - 「## 対象外」の節がある
   - 「## 合格基準」の各項目に ID（AC-001-1）と Given／When／Then がある
 コードブロックの中は対象外。ファイル名が _ で始まるもの（テンプレート）は飛ばす。
@@ -14,13 +18,23 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
-MARKER_RE = re.compile(r"TBD|要確認|保留|未定|\?\?\?")
+MARKERS = [
+    ("TBD", re.compile(r"\bTBD\b")),
+    ("要確認", re.compile(r"要確認")),
+    ("保留", re.compile(r"[【（(\[]保留[】）)\]]|保留[:：]")),
+    ("TODO", re.compile(r"\bTODO\b")),
+    ("確認待ち", re.compile(r"確認待ち")),
+    ("書きかけ", re.compile(r"書きかけ")),
+    ("未定", re.compile(r"未定")),
+    ("???", re.compile(r"\?\?\?")),
+]
 DECISION_LINK_RE = re.compile(r"decision:\s*#\d+")
 AC_ID_RE = re.compile(r"^AC-\d{3}-\d+\b")
 STATUSES_REQUIRING_APPROVAL = {"review", "approved"}
@@ -30,6 +44,7 @@ STATUSES_REQUIRING_APPROVAL = {"review", "approved"}
 class Marker:
     line_no: int
     text: str
+    kind: str  # どの印か
     ac_id: Optional[str]
     linked: bool  # 判断チケット（decision: #NN）へのリンクがあるか
 
@@ -106,11 +121,13 @@ def analyze(path: Path) -> SpecReport:
             elif stripped and ac_items:
                 ac_items[-1][2] += " " + stripped  # 継続行
 
-        if MARKER_RE.search(line):  # 1行に複数あっても1件と数える
+        kind = next((k for k, rx in MARKERS if rx.search(line)), None)
+        if kind:  # 1行に複数あっても1件と数える
             report.markers.append(
                 Marker(
                     line_no=line_no,
                     text=stripped,
+                    kind=kind,
                     ac_id=current_ac if section == "合格基準" else None,
                     linked=bool(DECISION_LINK_RE.search(line)),
                 )
@@ -140,7 +157,28 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="仕様の未確定と書式を検査する")
     parser.add_argument("paths", nargs="*", default=["docs/specs"])
     parser.add_argument("--require", choices=["approved"], help="承認に必要な条件を満たさなければ exit 1")
+    parser.add_argument("--json", action="store_true", help="未確定の一覧を JSON で出す")
     args = parser.parse_args(argv)
+
+    if args.json:
+        items = []
+        for target in args.paths:
+            for spec in find_specs(Path(target)):
+                r = analyze(spec)
+                for m in r.markers:
+                    items.append(
+                        {
+                            "file": str(spec),
+                            "line": m.line_no,
+                            "spec": r.spec_id,
+                            "kind": m.kind,
+                            "ac": m.ac_id,
+                            "linked": m.linked,
+                            "text": m.text,
+                        }
+                    )
+        print(json.dumps({"count": len(items), "items": items}, ensure_ascii=False, indent=2))
+        return 0
 
     failed = False
     for target in args.paths:

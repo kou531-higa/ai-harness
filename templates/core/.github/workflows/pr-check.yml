@@ -36,6 +36,13 @@ jobs:
           else
             echo "docs/specs がないので飛ばします"
           fi
+      - name: 仕様どうしの食い違い（機能一覧・画面仕様・遷移図・ユースケース）
+        run: |
+          if [ -f docs/specs/functions.md ]; then
+            python3 scripts/check_spec_consistency.py docs/specs
+          else
+            echo "機能一覧（docs/specs/functions.md）がないので飛ばします"
+          fi
 
   check:
     runs-on: ubuntu-latest
