@@ -22,7 +22,7 @@ disable-model-invocation: true
    - 変更の理由：PR の本文・関係するチケット・`docs/decisions/` の判断の記録
 3. **崩させる**：サブエージェント `catalog-challenger` を起動し、2 の材料だけを渡す。変更を書いた人の説明（なぜ良いと思ったか）は渡さない。
 4. **まとめる**：反証役の結果をそのまま載せ、異議ごとに「決める人」を決定者マップ（`docs/decisions/owners.md`）で確かめる。
-5. **人へ戻す**：異議が1件でもあれば、`/decision-memo` で判断チケットを起票し、PR に `needs-decision` を付ける（下の表）。異議がなければ「異議なし」と、崩せなかった観点を PR にコメントする。
+5. **人へ戻す**：異議が1件でもあれば、`/decision-memo` の手順と型で判断チケットを `gh issue create` で起票し、PR に `needs-decision` を付ける（下の表）。異議がなければ「異議なし」と、崩せなかった観点を PR にコメントする。
 6. **記録する**：`.harness/reviews/catalog-<番号または基準>.json` に、異議の件数と種類・未カバーの件数を書く。
 
 ## 終わってよい条件

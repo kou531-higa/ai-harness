@@ -172,6 +172,13 @@ def test_決まりの一覧は_当てはまらない場合を必ず持つ():
     assert "docs/decisions/rules.md" in memo
 
 
+def test_AIは判断チケットを自分で起票できる_決めるのは人():
+    claude = (CORE / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "gh issue create" in claude and "起票は AI がしてよい" in claude
+    memo = (CORE / ".claude" / "skills" / "decision-memo" / "SKILL.md").read_text(encoding="utf-8")
+    assert "AI からは呼べない" in memo and "起票してよい" in memo
+
+
 def test_割り振りの担当すべてに観点の一覧がある():
     routes = json.loads((CORE / ".claude" / "review-routes.json").read_text(encoding="utf-8"))
     for name in list(routes["reviewers"]) + ["general"]:

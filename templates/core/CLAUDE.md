@@ -30,7 +30,7 @@ AI と人の共通の規約。毎回の会話で読み込まれるので、**消
 - レビューで、重要な所が「未カバー」になった
 
 決まりの一覧（`docs/decisions/rules.md`）で答えが出る論点は戻さず、決まりに従って ID を PR と仕様に書く。
-戻すときは `/decision-memo` で判断チケットを起票する（論点／選択肢1〜3／影響／推奨）。
+戻すときは `/decision-memo` の手順と型（論点／選択肢1〜3／影響／推奨）で、判断チケットを `gh issue create` で起票する。起票は AI がしてよい（決めるのは人）。
 ラベル `ai-stop:<理由>` を必ず付ける。理由は次から選ぶ：
 `spec-undecided` `spec-conflict` `customer-agreement` `two-failures` `shared-component`
 `pr-too-large` `irreversible` `security` `uncovered` `other`
