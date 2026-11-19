@@ -38,7 +38,7 @@ def test_CLAUDE_mdは150行以内():
 
 
 def test_スキルが3つある():
-    assert {p.parent.name for p in SKILLS} >= {"feature", "bugfix", "decision-memo"}
+    assert {p.parent.name for p in SKILLS} >= {"feature", "bugfix", "decision-memo", "impact", "verify", "spec-review"}
 
 
 @pytest.mark.parametrize("skill", SKILLS, ids=lambda p: p.parent.name)
