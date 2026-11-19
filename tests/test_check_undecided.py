@@ -138,3 +138,13 @@ def test_JSONで台帳に入れる形を出す(tmp_path, capsys):
     assert data["count"] == 1
     item = data["items"][0]
     assert item["kind"] == "TBD" and item["spec"] == "SPEC-001" and item["ac"] == "AC-001-1"
+
+
+def test_ignoreの印を付けた行は数えない(tmp_path):
+    p = tmp_path / "states.md"
+    p.write_text(
+        "# 状態\n| WAITING | 取引先の確認待ち | 問い合わせ中 | <!-- undecided: ignore -->\n- 頻度は確認待ち\n",
+        encoding="utf-8",
+    )
+    report = cu.analyze(p)
+    assert [m.line_no for m in report.markers] == [3]

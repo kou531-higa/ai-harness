@@ -3,6 +3,10 @@
 
   python scripts/check_spec_consistency.py docs/specs          食い違いがあれば一覧を出して exit 1
   python scripts/check_spec_consistency.py docs/specs --json   一覧を JSON で出す（未決事項台帳に入れる）
+  python scripts/check_spec_consistency.py docs/specs --baseline docs/specs/consistency-baseline.json
+      既知の食い違い（導入前からあるもの）では止めず、新しく増えたものだけで exit 1
+  python scripts/check_spec_consistency.py docs/specs --write-baseline docs/specs/consistency-baseline.json
+      今の食い違いを既知として記録する（人が判断して実行する）
 
 読む文書（docs/specs の下）：
   functions.md        機能一覧。表の列「画面ID」「画面名」「表示件数」「遷移先」（遷移先は、で区切る）
@@ -125,22 +129,47 @@ def check(specs: Path) -> List[Finding]:
     return found
 
 
+def _key(f: Finding) -> str:
+    return f"{f.kind}|{f.detail}"
+
+
+def load_baseline(path: Path) -> Set[str]:
+    if not path.exists():
+        return set()
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {f"{x['kind']}|{x['detail']}" for x in data.get("items", [])}
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="仕様どうしの食い違いを検査する")
     parser.add_argument("specs", nargs="?", default="docs/specs")
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--baseline", help="既知の食い違いの一覧（JSON）。ここにあるものでは止めない")
+    parser.add_argument("--write-baseline", help="今の食い違いを既知として書き出す")
     args = parser.parse_args(argv)
 
     found = check(Path(args.specs))
+    if args.write_baseline:
+        out = {"note": "導入前からある食い違い。直したら消す", "items": [asdict(f) for f in found]}
+        Path(args.write_baseline).write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(f"既知の食い違い {len(found)}件を {args.write_baseline} に書きました")
+        return 0
     if args.json:
         print(json.dumps({"count": len(found), "items": [asdict(f) for f in found]}, ensure_ascii=False, indent=2))
         return 0
-    if not found:
-        print("食い違い: 0件")
-        return 0
-    print(f"食い違い: {len(found)}件")
-    for f in found:
+    known = load_baseline(Path(args.baseline)) if args.baseline else set()
+    new = [f for f in found if _key(f) not in known]
+    old = [f for f in found if _key(f) in known]
+    resolved = sorted(known - {_key(f) for f in found})
+    print(f"食い違い: {len(found)}件（新しい {len(new)}件・既知 {len(old)}件）")
+    for f in new:
         print(f"  [{f.kind}] {f.detail}  ({f.where})")
+    for f in old:
+        print(f"  既知 [{f.kind}] {f.detail}  ({f.where})")
+    for k in resolved:
+        print(f"  解消済み：{k.split('|', 1)[1]}（既知の一覧から消してください）")
+    if not new:
+        return 0
     print("\nどちらを直すかは人が決めます。重要なものは判断メモ（/decision-memo）にしてください。")
     return 1
 

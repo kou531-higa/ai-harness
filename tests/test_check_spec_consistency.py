@@ -103,3 +103,24 @@ def test_JSONで一覧を出す(specs, capsys):
     data = json.loads(capsys.readouterr().out)
     assert data["count"] == len(data["items"]) >= 1
     assert {"kind", "where", "detail"} <= set(data["items"][0])
+
+
+def test_既知の食い違いでは止めず_新しいものだけで止める(specs, tmp_path, capsys):
+    (specs / "screens" / "SCR-003.md").unlink()
+    base = tmp_path / "baseline.json"
+    assert cc.main([str(specs), "--write-baseline", str(base)]) == 0
+    assert cc.main([str(specs), "--baseline", str(base)]) == 0
+    assert "既知" in capsys.readouterr().out
+    (specs / "screens" / "SCR-001.md").write_text(screen("SCR-001", "SCR-002", "20"), encoding="utf-8")
+    assert cc.main([str(specs), "--baseline", str(base)]) == 1
+    assert "新しい 1件" in capsys.readouterr().out
+
+
+def test_直した食い違いは既知の一覧から消すよう案内する(specs, tmp_path, capsys):
+    (specs / "screens" / "SCR-003.md").unlink()
+    base = tmp_path / "baseline.json"
+    cc.main([str(specs), "--write-baseline", str(base)])
+    (specs / "screens" / "SCR-003.md").write_text(screen("SCR-003", "SCR-002"), encoding="utf-8")
+    capsys.readouterr()
+    assert cc.main([str(specs), "--baseline", str(base)]) == 0
+    assert "解消済み" in capsys.readouterr().out

@@ -1,0 +1,33 @@
+name: spec-nightly
+
+# 毎晩、仕様の全体を検査する。PR の検査は「新しく増えたもの」だけで止めるので、
+# 既知の食い違いと未確定の残りをここで毎日見えるようにする（止めずに一覧を出す）
+
+on:
+  schedule:
+    - cron: "0 18 * * *"  # 日本時間 3:00
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  specs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 未確定と食い違いの一覧
+        run: |
+          [ -d docs/specs ] || { echo "docs/specs がありません"; exit 0; }
+          {
+            echo "## 仕様の検査（毎晩）"
+            echo '```'
+            python3 scripts/check_undecided.py docs/specs || true
+            python3 scripts/check_spec_consistency.py docs/specs || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$GITHUB_STEP_SUMMARY"
+      - name: 未決事項台帳が仕様と合っている
+        run: |
+          [ -f docs/decisions/undecided.md ] || exit 0
+          python3 scripts/undecided_ledger.py --check
