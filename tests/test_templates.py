@@ -179,6 +179,16 @@ def test_AIは判断チケットを自分で起票できる_決めるのは人()
     assert "AI からは呼べない" in memo and "起票してよい" in memo
 
 
+def test_運用で見つかった穴を直してある():
+    routes = json.loads((CORE / ".claude" / "review-routes.json").read_text(encoding="utf-8"))
+    pats = [re.compile(p) for p in routes["reviewers"]["security"]["content"]]
+    assert any(p.search('log.info("x", phone=row.phone)') for p in pats)  # F-2：log.info も個人情報の担当に回す
+    owners = (CORE / "docs" / "decisions" / "owners.md").read_text(encoding="utf-8")
+    assert "本物のチームの名前に置き換える" in owners  # F-4
+    memo = (CORE / ".claude" / "skills" / "decision-memo" / "SKILL.md").read_text(encoding="utf-8")
+    assert "外さずに" in memo and "書式つき" in memo  # F-5・F-4
+
+
 def test_割り振りの担当すべてに観点の一覧がある():
     routes = json.loads((CORE / ".claude" / "review-routes.json").read_text(encoding="utf-8"))
     for name in list(routes["reviewers"]) + ["general"]:
