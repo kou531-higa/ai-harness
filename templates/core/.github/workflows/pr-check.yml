@@ -1,0 +1,48 @@
+name: pr-check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PR の変更行数（上限 400 行）
+        env:
+          # ラベル名は env 経由で渡す（スクリプトに直接埋め込まない）
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 scripts/check_pr_size.py --base "origin/${BASE_REF}" --labels "$LABELS"
+
+  specs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 仕様の未確定と書式
+        run: |
+          if [ -d docs/specs ]; then
+            python3 scripts/check_undecided.py docs/specs --require approved
+          else
+            echo "docs/specs がないので飛ばします"
+          fi
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # プロジェクトに合わせてセットアップを足す（例：astral-sh/setup-uv、actions/setup-node）
+      - name: make check（lint・型・テスト・差分カバレッジ）
+        run: make check
