@@ -24,6 +24,11 @@ jobs:
           LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
           BASE_REF: ${{ github.base_ref }}
         run: python3 scripts/check_pr_size.py --base "origin/${BASE_REF}" --labels "$LABELS"
+      - name: 衝突の印が残っていない（<<<<<<< と >>>>>>> の行）
+        run: |
+          if git grep -nE '^(<<<<<<<|>>>>>>>)( |$)' -- .; then
+            echo "衝突の印が残っています。衝突を直してから push してください"; exit 1
+          fi
 
   review-route:
     runs-on: ubuntu-latest
