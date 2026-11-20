@@ -9,6 +9,7 @@ GitHub の無料プランの非公開リポジトリでは、必須チェック�
 - 検査が1つ以上あり、すべて成功している（実行中・失敗があれば止める）
 - main に追いついている（遅れていれば止める）
 - 確かめたときから、新しいコミットが積まれていない（--match-head-commit）
+この PR の枝に積んだ PR があれば、マージの前に行き先をこの PR の行き先に付け替える（枝を消すと閉じてしまうため）。
 
 AI はこのスクリプトを実行しない（.claude/settings.json で禁止している）。
 """
@@ -24,6 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
+FIELDS = "state,isDraft,labels,mergeable,mergeStateStatus,headRefOid,title,headRefName,baseRefName"
 OK_BUCKETS = {"pass", "skipping"}
 BLOCK_LABELS = {"needs-decision"}
 
@@ -54,6 +56,20 @@ def problems(pr: dict, checks: List[dict]) -> List[str]:
     return out
 
 
+def retarget_stacked(head: str, base: str) -> List[str]:
+    """この PR の枝（head）を行き先にしている開いた PR の行き先を、base に付け替える。付け替えた番号を返す。"""
+    if not head or not base:
+        return []
+    r = gh("pr", "list", "--base", head, "--state", "open", "--json", "number")
+    stacked = json.loads(r.stdout) if r.returncode == 0 and r.stdout.strip().startswith("[") else []
+    moved = []
+    for item in stacked:
+        n = str(item["number"])
+        if gh("pr", "edit", n, "--base", base).returncode == 0:
+            moved.append(n)
+    return moved
+
+
 def record(number: str) -> None:
     try:
         d = Path(".harness")
@@ -74,7 +90,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print("PR の番号を指定してください（例：make merge PR=12）", file=sys.stderr)
         return 2
 
-    r = gh("pr", "view", args.number, "--json", "state,isDraft,labels,mergeable,mergeStateStatus,headRefOid,title")
+    r = gh("pr", "view", args.number, "--json", FIELDS)
     if r.returncode != 0:
         print(f"PR を読めません：{r.stderr.strip()}", file=sys.stderr)
         return 2
@@ -93,6 +109,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.dry_run:
         print("（試しに実行：マージしていません）")
         return 0
+    for n in retarget_stacked(pr.get("headRefName", ""), pr.get("baseRefName", "")):
+        print(f"積んだ PR #{n} の行き先を {pr.get('baseRefName')} に付け替えました")
     r = gh("pr", "merge", args.number, "--squash", "--delete-branch", "--match-head-commit", pr["headRefOid"])
     if r.returncode != 0:
         print(f"マージに失敗しました：{r.stderr.strip()}", file=sys.stderr)

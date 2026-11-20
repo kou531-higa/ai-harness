@@ -44,6 +44,8 @@ PR_OK = {
     "mergeStateStatus": "CLEAN",
     "headRefOid": "abc123",
     "title": "テスト",
+    "headRefName": "feat/1-a",
+    "baseRefName": "main",
 }
 CHECKS_OK = [{"name": "test", "state": "SUCCESS", "bucket": "pass"}, {"name": "pr-size", "bucket": "pass"}]
 
@@ -61,7 +63,9 @@ def fake_gh(tmp_path: Path):
             "a = sys.argv[1:]\n"
             "(d / 'calls.txt').open('a').write(' '.join(a) + '\\n')\n"
             "if a[:2] == ['pr', 'view']: print((d / 'pr.json').read_text())\n"
-            "elif a[:2] == ['pr', 'checks']: print((d / 'checks.json').read_text())\n",
+            "elif a[:2] == ['pr', 'checks']: print((d / 'checks.json').read_text())\n"
+            "elif a[:2] == ['pr', 'list']:\n"
+            "    print((d / 'list.json').read_text() if (d / 'list.json').exists() else '[]')\n",
             encoding="utf-8",
         )
         script.chmod(0o755)
@@ -115,3 +119,22 @@ def test_dry_runはマージしない(tmp_path, fake_gh):
 
 def test_番号でなければ止める(tmp_path, fake_gh):
     assert merge(tmp_path, fake_gh(PR_OK, CHECKS_OK), "").returncode == 2
+
+
+def test_積んだPRの行き先を付け替えてからマージする(tmp_path, fake_gh):
+    env = fake_gh(PR_OK, CHECKS_OK)
+    (tmp_path / "list.json").write_text(json.dumps([{"number": 13}, {"number": 14}]), encoding="utf-8")
+    r = merge(tmp_path, env, "12")
+    assert r.returncode == 0, r.stdout + r.stderr
+    c = calls(tmp_path)
+    assert "pr list --base feat/1-a --state open --json number" in c
+    assert "pr edit 13 --base main" in c and "pr edit 14 --base main" in c
+    assert c.index("pr edit 14 --base main") < c.index("pr merge 12")
+    assert "#13" in r.stdout
+
+
+def test_dry_runでは付け替えない(tmp_path, fake_gh):
+    env = fake_gh(PR_OK, CHECKS_OK)
+    (tmp_path / "list.json").write_text(json.dumps([{"number": 13}]), encoding="utf-8")
+    merge(tmp_path, env, "12", "--dry-run")
+    assert "pr edit" not in calls(tmp_path)
