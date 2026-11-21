@@ -12,10 +12,10 @@ import pytest
 SCRIPT = Path(__file__).resolve().parents[1] / "templates" / "core" / "scripts" / "impact.py"
 
 FILES = {
-    "api/src/billing/billing.ts": "const sql = \"status in ('ACCEPTED','BILLABLE')\";\n",
-    "api/src/billing/billing.spec.ts": "it('ACCEPTED は対象', () => {});\n",
-    "db/procedures/close.sql": "where status in ('ACCEPTED','BILLABLE') or status = 'ON_HOLD'\n",
-    "web/src/app/page.tsx": "const billed = ['ACCEPTED', 'BILLABLE', 'COMPLETED'];\n",
+    "api/src/orders/orders.ts": "const sql = \"status in ('ACCEPTED','READY')\";\n",
+    "api/src/orders/orders.spec.ts": "it('ACCEPTED は対象', () => {});\n",
+    "db/procedures/close.sql": "where status in ('ACCEPTED','READY') or status = 'ON_HOLD'\n",
+    "web/src/app/page.tsx": "const ready = ['ACCEPTED', 'READY', 'COMPLETED'];\n",
     "docs/specs/states.md": "| ACCEPTED | 検収済み |\n",
     "api/package-lock.json": '{"ACCEPTED": 1}\n',
     "batch/commands/unrelated.py": "print('nothing')\n",
@@ -43,8 +43,8 @@ def data(repo: Path, *terms: str) -> dict:
 
 def test_層と種類に分ける(repo):
     hits = {h["file"]: (h["layer"], h["kind"]) for h in data(repo, "ACCEPTED")["hits"]}
-    assert hits["api/src/billing/billing.ts"] == ("api", "コード")
-    assert hits["api/src/billing/billing.spec.ts"] == ("api", "テスト")
+    assert hits["api/src/orders/orders.ts"] == ("api", "コード")
+    assert hits["api/src/orders/orders.spec.ts"] == ("api", "テスト")
     assert hits["db/procedures/close.sql"] == ("db", "SQL")
     assert hits["docs/specs/states.md"] == ("docs", "仕様・文書")
 

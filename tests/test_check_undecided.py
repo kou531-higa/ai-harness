@@ -112,7 +112,7 @@ def test_テンプレートは飛ばす(tmp_path):
         ("件数は TBD", "TBD"),
         ("上限は要確認", "要確認"),
         ("扱いは【保留】", "保留"),
-        ("保留：取引先と相談中", "保留"),
+        ("保留：連携先と相談中", "保留"),
         ("TODO 文字コードを決める", "TODO"),
         ("顧客の確認待ち", "確認待ち"),
         ("（この節は書きかけ）", "書きかけ"),
@@ -143,7 +143,7 @@ def test_JSONで台帳に入れる形を出す(tmp_path, capsys):
 def test_ignoreの印を付けた行は数えない(tmp_path):
     p = tmp_path / "states.md"
     p.write_text(
-        "# 状態\n| WAITING | 取引先の確認待ち | 問い合わせ中 | <!-- undecided: ignore -->\n- 頻度は確認待ち\n",
+        "# 状態\n| WAITING | 連携先の確認待ち | 問い合わせ中 | <!-- undecided: ignore -->\n- 頻度は確認待ち\n",
         encoding="utf-8",
     )
     report = cu.analyze(p)
