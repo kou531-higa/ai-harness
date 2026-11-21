@@ -8,6 +8,8 @@ from typing import List, Tuple
 LABELS: List[Tuple[str, str, str]] = [
     ("needs-decision", "d93f0b", "人の判断を待っている"),
     ("size-exception", "fbca04", "PR の行数の上限を超えてよいと人が認めた"),
+    ("owner-approved", "0e8a16", "型の設定などを変える PR を、オーナーが中身を見て認めた（AI は付けない）"),
+    ("owner-digest", "5319e7", "型を回す AI が作る、オーナーへの1日1枚の確認"),
     ("ai-stop:spec-undecided", "c5def5", "仕様に未確定がある"),
     ("ai-stop:spec-conflict", "c5def5", "仕様どうし、または仕様と実装が食い違う"),
     ("ai-stop:customer-agreement", "c5def5", "顧客の合意が要る"),

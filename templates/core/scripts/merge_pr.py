@@ -9,7 +9,8 @@ GitHub の無料プランの非公開リポジトリでは、必須チェック�
 - 検査が1つ以上あり、すべて成功している（実行中・失敗があれば止める）
 - main に追いついている（遅れていれば止める）
 - 確かめたときから、新しいコミットが積まれていない（--match-head-commit）
-- 型の設定（CONFIG_PATHS）を変える PR は、--owner-approved を付けたときだけマージする
+- 型の設定（CONFIG_PATHS）を変える PR は、--owner-approved を付けたときか、
+  PR に owner-approved のラベルがあるときだけマージする
 この PR の枝に積んだ PR があれば、マージの前に行き先をこの PR の行き先に付け替える（枝を消すと閉じてしまうため）。
 
 AI はこのスクリプトを実行しない（.claude/settings.json で禁止している）。
@@ -31,6 +32,7 @@ from typing import List, Optional
 FIELDS = "state,isDraft,labels,mergeable,mergeStateStatus,headRefOid,title,headRefName,baseRefName,files"
 OK_BUCKETS = {"pass", "skipping"}
 BLOCK_LABELS = {"needs-decision"}
+APPROVED_LABEL = "owner-approved"  # オーナーが中身を見て付ける。AI は付けない（CLAUDE.md）
 # 型の設定。変える PR は、オーナーが認めるまでマージしない。環境変数 HARNESS_CONFIG_PATHS（, 区切り）で置き換えられる
 CONFIG_PATHS = (
     ".claude/",
@@ -80,9 +82,12 @@ def problems(pr: dict, checks: List[dict], owner_approved: bool = False) -> List
     if not checks:
         out.append("検査が1つもありません")
     changed = config_changes(pr)
-    if changed and not owner_approved:
+    if changed and not (owner_approved or APPROVED_LABEL in labels):
         shown = "、".join(changed[:5]) + (f" ほか{len(changed) - 5}件" if len(changed) > 5 else "")
-        out.append(f"型の設定を変えます（{shown}）。オーナーが中身を認めたら --owner-approved を付けて実行する")
+        out.append(
+            f"型の設定を変えます（{shown}）。オーナーが中身を認めたら "
+            "--owner-approved を付けて実行するか、PR に owner-approved のラベルを付ける"
+        )
     for c in checks:
         if c.get("bucket") not in OK_BUCKETS:
             out.append(f"検査 {c.get('name')} が {c.get('bucket') or c.get('state')} です")
