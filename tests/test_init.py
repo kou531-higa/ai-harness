@@ -96,6 +96,7 @@ def test_labelsは10の理由と判断待ちを作る(capsys):
     out = capsys.readouterr().out
     assert out.count("ai-stop:") == 10
     assert "needs-decision" in out
+    assert "owner-approved" in out and "owner-digest" in out
     assert "--force" in out
 
 

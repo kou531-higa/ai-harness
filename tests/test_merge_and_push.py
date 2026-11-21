@@ -176,3 +176,10 @@ def test_型の設定の場所は環境変数で置き換えられる(tmp_path, 
     env = {**fake_gh(PR_CONFIG, CHECKS_OK), "HARNESS_CONFIG_PATHS": "src/"}
     r = merge(tmp_path, env, "12")
     assert r.returncode == 1 and "src/app.py" in r.stdout
+
+
+def test_owner_approvedのラベルでも型の設定を変えるPRをマージする(tmp_path, fake_gh):
+    pr = {**PR_CONFIG, "labels": [{"name": "owner-approved"}]}
+    r = merge(tmp_path, fake_gh(pr, CHECKS_OK), "12")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "pr merge 12" in calls(tmp_path)
