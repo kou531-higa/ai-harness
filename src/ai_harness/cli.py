@@ -29,7 +29,9 @@ NEXT_STEPS = """
   2. .github/workflows/pr-check.yml の check ジョブに、言語のセットアップを足す
   3. Makefile にマージの入口を足す：
        merge:
-       \tpython3 scripts/merge_pr.py $(PR)
+       \tpython3 scripts/merge_pr.py $(PR) $(if $(OWNER_APPROVED),--owner-approved)
+     型の設定（.claude/・.github/・CLAUDE.md など）を変える PR は、オーナーが認めてから
+     make merge PR=<番号> OWNER_APPROVED=1 でマージする
   4. harness labels で、AI が止まった理由のラベルを作る
   5. docs/decisions/owners.md の決定者（@customer などの役の名前）を、本物のチームの名前に置き換える
 """

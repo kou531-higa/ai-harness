@@ -57,3 +57,18 @@ def test_型のファイルとDEC_000は数えない(tmp_path):
     write(tmp_path, "docs/specs/SPEC-001.md", "例：DEC-000\n")
     r = run(tmp_path, "docs/specs", "docs/decisions")
     assert r.returncode == 0, r.stdout
+
+
+def test_PRの本文のコードの中の番号は例として数えない(tmp_path):
+    write(tmp_path, "docs/decisions/DEC-002.md", "---\nid: DEC-002\n---\n")
+    body = "DEC-002 による\n例：`DEC-901` のように書く\n```\nsupersedes: DEC-030\n```\nDEC-044 も見る\n"
+    write(tmp_path, "pr.md", body)
+    r = run(tmp_path, "--body-file", "pr.md")
+    assert r.returncode == 1
+    assert "DEC-044" in r.stdout and "PR の本文:6" in r.stdout
+    assert "DEC-901" not in r.stdout and "DEC-030" not in r.stdout
+
+
+def test_仕様ではコードの中の番号も参照として数える(tmp_path):
+    write(tmp_path, "docs/specs/SPEC-001.md", "取り消しは `DEC-012` による\n")
+    assert run(tmp_path, "docs/specs").returncode == 1
