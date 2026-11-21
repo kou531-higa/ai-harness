@@ -138,3 +138,41 @@ def test_dry_runでは付け替えない(tmp_path, fake_gh):
     (tmp_path / "list.json").write_text(json.dumps([{"number": 13}]), encoding="utf-8")
     merge(tmp_path, env, "12", "--dry-run")
     assert "pr edit" not in calls(tmp_path)
+
+
+def test_衝突していたら直し方を出して止める(tmp_path, fake_gh):
+    r = merge(tmp_path, fake_gh({**PR_OK, "mergeable": "CONFLICTING"}, []), "12")
+    assert r.returncode == 1
+    assert "CI が動きません" in r.stdout and "両方の名前を残す" in r.stdout
+
+
+def test_衝突の有無がまだ分からなければ止める(tmp_path, fake_gh):
+    env = {**fake_gh({**PR_OK, "mergeable": "UNKNOWN"}, CHECKS_OK), "HARNESS_MERGEABLE_TRIES": "1"}
+    r = merge(tmp_path, env, "12")
+    assert r.returncode == 1 and "まだ確かめていません" in r.stdout
+    assert "pr merge" not in calls(tmp_path)
+
+
+PR_CONFIG = {**PR_OK, "files": [{"path": ".claude/agents/reviewer.md"}, {"path": "src/app.py"}]}
+
+
+def test_型の設定を変えるPRはオーナーの承認がなければ止める(tmp_path, fake_gh):
+    r = merge(tmp_path, fake_gh(PR_CONFIG, CHECKS_OK), "12")
+    assert r.returncode == 1
+    assert ".claude/agents/reviewer.md" in r.stdout and "--owner-approved" in r.stdout
+    assert "src/app.py" not in r.stdout
+    assert "pr merge" not in calls(tmp_path)
+
+
+def test_オーナーが認めたら型の設定を変えるPRもマージする(tmp_path, fake_gh):
+    r = merge(tmp_path, fake_gh(PR_CONFIG, CHECKS_OK), "12", "--owner-approved")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "pr merge 12" in calls(tmp_path)
+
+
+def test_型の設定の場所は環境変数で置き換えられる(tmp_path, fake_gh):
+    env = {**fake_gh(PR_CONFIG, CHECKS_OK), "HARNESS_CONFIG_PATHS": "infra/, deploy.yml"}
+    assert merge(tmp_path, env, "12").returncode == 0
+    env = {**fake_gh(PR_CONFIG, CHECKS_OK), "HARNESS_CONFIG_PATHS": "src/"}
+    r = merge(tmp_path, env, "12")
+    assert r.returncode == 1 and "src/app.py" in r.stdout

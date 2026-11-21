@@ -8,6 +8,7 @@
 - 判断記録は、ファイル名が `DEC-<番号>` で始まるもの、または frontmatter の `id: DEC-<番号>` で見つける
 - 型（`_` で始まるファイル）と `DEC-000` は数えない
 - 決定の正本は判断記録と仕様。チケットのコメントだけにある決定は、参照しても見つからない扱いになる
+- PR の本文では、`…` とコードの囲み（```）の中の番号は例として数えない（例を書くときは囲む）
 """
 
 from __future__ import annotations
@@ -41,6 +42,14 @@ def known_decisions(root: Path) -> Set[str]:
     return found
 
 
+CODE_RE = re.compile(r"```.*?```|`[^`\n]*`", re.S)
+
+
+def without_code(text: str) -> str:
+    """コードの囲みと `…` を、改行だけ残して消す（行の番号は変えない）"""
+    return CODE_RE.sub(lambda m: "\n" * m.group(0).count("\n"), text)
+
+
 def refs_in(text: str, where: str) -> List[Tuple[str, str]]:
     out = []
     for no, line in enumerate(text.splitlines(), 1):
@@ -53,7 +62,7 @@ def refs_in(text: str, where: str) -> List[Tuple[str, str]]:
 def collect(paths: List[str], body_file: Optional[str]) -> List[Tuple[str, str]]:
     refs: List[Tuple[str, str]] = []
     if body_file:
-        refs += refs_in(Path(body_file).read_text(encoding="utf-8"), "PR の本文")
+        refs += refs_in(without_code(Path(body_file).read_text(encoding="utf-8")), "PR の本文")
     for arg in paths:
         if arg == "-":
             refs += refs_in(sys.stdin.read(), "標準入力")
