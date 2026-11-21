@@ -30,7 +30,9 @@
       "Bash(gh pr checkout:*)",
       "Bash(python3 scripts/review_route.py:*)",
       "Bash(python3 scripts/impact.py:*)",
-      "Bash(python3 scripts/check_forbidden.py:*)"
+      "Bash(python3 scripts/check_forbidden.py:*)",
+      "Bash(python3 scripts/check_dec_refs.py:*)",
+      "Bash(python3 scripts/check_pr_size.py:*)"
     ],
     "deny": [
       "Bash(terraform apply:*)",
@@ -83,6 +85,11 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-specs-on-stop.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-done-on-stop.py",
+            "timeout": 900
           }
         ]
       }

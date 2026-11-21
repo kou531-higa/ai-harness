@@ -11,7 +11,7 @@ import pytest
 
 CORE = Path(__file__).resolve().parents[1] / "templates" / "core"
 SCRIPT = CORE / "scripts" / "check_forbidden.py"
-STATES = ["ACCEPTED", "BILLABLE", "ON_HOLD", "COMPLETED"]
+STATES = ["ACCEPTED", "READY", "ON_HOLD", "COMPLETED"]
 
 
 def git(repo: Path, *args: str) -> None:
@@ -33,7 +33,7 @@ def repo(tmp_path: Path) -> Path:
     cfg = json.loads((CORE / ".claude" / "forbidden-patterns.json").read_text(encoding="utf-8"))
     cfg["states"] = STATES
     (tmp_path / ".claude" / "forbidden-patterns.json").write_text(json.dumps(cfg), encoding="utf-8")
-    write(tmp_path, "api/src/old.ts", "const billed = ['ACCEPTED', 'BILLABLE'];\n")  # 導入前からある
+    write(tmp_path, "api/src/old.ts", "const ready = ['ACCEPTED', 'READY'];\n")  # 導入前からある
     git(tmp_path, "add", "-A")
     git(tmp_path, "commit", "-q", "-m", "init")
     git(tmp_path, "switch", "-q", "-c", "feat")
@@ -54,9 +54,9 @@ def rules(r: subprocess.CompletedProcess) -> list:
 
 
 def test_状態名を2つ以上並べた判定を見つける(repo):
-    r = run(repo, {"api/src/billing.ts": "x\nwhere status in ('ACCEPTED','BILLABLE')\n"})
+    r = run(repo, {"api/src/orders.ts": "x\nwhere status in ('ACCEPTED','READY')\n"})
     assert r.returncode == 1
-    assert rules(r) == [("state-list", "api/src/billing.ts", 2)]
+    assert rules(r) == [("state-list", "api/src/orders.ts", 2)]
 
 
 def test_状態名が1つだけなら当たらない(repo):
@@ -71,7 +71,7 @@ def test_導入前からある行では止めない_allなら数える(repo):
 
 
 def test_テストとカタログは対象外(repo):
-    r = run(repo, {"api/src/x.spec.ts": "['ACCEPTED','BILLABLE']\n", "catalog/states.ts": "['ACCEPTED','BILLABLE']\n"})
+    r = run(repo, {"api/src/x.spec.ts": "['ACCEPTED','READY']\n", "catalog/states.ts": "['ACCEPTED','READY']\n"})
     assert r.returncode == 0
 
 
@@ -87,9 +87,9 @@ def test_自作のページングとSQLの組み立てを見つける(repo):
 
 
 def test_理由付きの例外は通し_理由のない例外は通さない(repo):
-    ok = "const a = ['ACCEPTED','BILLABLE']; // forbidden-ok: state-list 表示の並び順だけに使う\n"
+    ok = "const a = ['ACCEPTED','READY']; // forbidden-ok: state-list 表示の並び順だけに使う\n"
     assert run(repo, {"web/a.ts": ok}).returncode == 0
-    r = run(repo, {"web/b.ts": "const b = ['ACCEPTED','BILLABLE']; // forbidden-ok: state-list\n"})
+    r = run(repo, {"web/b.ts": "const b = ['ACCEPTED','READY']; // forbidden-ok: state-list\n"})
     assert r.returncode == 1
 
 
@@ -98,4 +98,4 @@ def test_状態の一覧が空なら状態の決まりは使わない(repo):
     data = json.loads(cfg.read_text(encoding="utf-8"))
     data["states"] = []
     cfg.write_text(json.dumps(data), encoding="utf-8")
-    assert run(repo, {"api/src/y.ts": "['ACCEPTED','BILLABLE']\n"}).returncode == 0
+    assert run(repo, {"api/src/y.ts": "['ACCEPTED','READY']\n"}).returncode == 0

@@ -1,5 +1,5 @@
 {
-  "note": "レビューの割り振り。paths は場所で選ぶ、content は追加した行の中身で足す。critical は誰かが必ず見る所",
+  "note": "レビューの割り振り。paths は場所で選ぶ、content は追加した行の中身で足す。critical は誰かが必ず見る所。state の状態名は例なので、catalog/ の状態名に置き換える",
   "reviewers": {
     "web": {"paths": ["web/*"]},
     "api": {"paths": ["api/*"]},
@@ -17,7 +17,7 @@
       ]
     },
     "state": {
-      "content": ["['\"](RECEIVED|REVIEWING|WAITING_[A-Z]+|DISPATCHED|VISIT_SCHEDULED|IN_PROGRESS|ON_HOLD|COMPLETED|ACCEPTED|BILLABLE|BILLED|RETURNED|CANCELLED)['\"]"]
+      "content": ["['\"](DRAFT|PENDING|SUBMITTED|IN_REVIEW|WAITING_[A-Z]+|APPROVED|REJECTED|IN_PROGRESS|ON_HOLD|COMPLETED|CANCELLED|CLOSED)['\"]"]
     }
   },
   "critical": [

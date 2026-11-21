@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """影響範囲の候補を、層ごとに並べる（/impact から使う）。
 
-  python3 scripts/impact.py ON_HOLD BILLABLE          言葉（状態名・テーブル名・関数名など）を含む所
+  python3 scripts/impact.py ON_HOLD CANCELLED         言葉（状態名・テーブル名・関数名など）を含む所
   python3 scripts/impact.py ON_HOLD --json
 
 git で管理しているファイルを、言葉そのもので探す（正規表現ではない）。
