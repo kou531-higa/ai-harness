@@ -83,7 +83,7 @@ def test_ai_stopの理由は決められた一覧から選ぶ(path):
 def test_settingsのフックが実在する():
     settings = json.loads((CORE / ".claude" / "settings.json").read_text(encoding="utf-8"))
     commands = [h["command"] for groups in settings["hooks"].values() for g in groups for h in g["hooks"]]
-    assert len(commands) == 3
+    assert len(commands) == 4
     for cmd in commands:
         script = re.search(r"\.claude/hooks/([\w-]+\.py)", cmd).group(1)
         assert (CORE / ".claude" / "hooks" / script).exists(), script
@@ -193,3 +193,89 @@ def test_割り振りの担当すべてに観点の一覧がある():
     routes = json.loads((CORE / ".claude" / "review-routes.json").read_text(encoding="utf-8"))
     for name in list(routes["reviewers"]) + ["general"]:
         assert (CORE / ".claude" / "review" / f"{name}.md").exists(), name
+
+
+def skill(name: str) -> str:
+    return (CORE / ".claude" / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("name", ["feature", "bugfix"])
+def test_決定はDECか仕様に書き戻してから実装し_最後に決定記録を書く(name):
+    text = skill(name)
+    assert "コメントは正本にしない" in text  # 穴1
+    assert "決定記録を1本書く" in text
+    for part in ("なぜ", "合意した範囲", "先送りしたもの", "根拠"):
+        assert part in text, part
+    assert "それぞれ main から作る" in text and "分割の途中ではチケットを閉じない" in text  # 穴4
+
+
+def test_判断記録の型は_なぜ_範囲_先送り_根拠を持つ():
+    text = (CORE / "docs" / "decisions" / "_template.md").read_text(encoding="utf-8")
+    for head in ("## なぜ", "## 合意した範囲", "## 先送りしたものと理由", "## 根拠"):
+        assert head in text, head
+
+
+def test_PRテンプレートに関係するDECの欄がある():
+    text = (CORE / ".github" / "pull_request_template.md").read_text(encoding="utf-8")
+    assert "## 関係する DEC" in text
+    workflow = (CORE / ".github" / "workflows" / "pr-check.yml").read_text(encoding="utf-8")
+    assert "check_dec_refs.py" in workflow
+
+
+@pytest.mark.parametrize("name", ["review", "spec-review"])
+def test_レビューは収束させる(name):
+    text = skill(name)
+    assert "前回からの差分と未解決の指摘だけ" in text  # 穴2
+    assert "解決・見送り・新規" in text
+    assert "重さの下限" in text and "1回の指摘の上限" in text
+    assert "重大な新規が0の回が2回続いたら閉じる" in text
+    assert "作業チケット" in text
+
+
+def test_reviewはレビュー役を前景で動かし_そろうまで終えない():
+    text = skill("review")
+    assert "前景" in text and "全員の結果がそろってから" in text  # 穴5
+
+
+def test_人と話さず動かすときの文書がある():
+    text = (CORE / "docs" / "harness" / "headless.md").read_text(encoding="utf-8")
+    for must in (
+        "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1",
+        "--permission-mode",
+        "--settings",
+        "--bare",
+        "--output-format json",
+        "--max-turns",
+        "--max-budget-usd",
+        "HARNESS_STOP_CHECK",
+    ):
+        assert must in text, must
+
+
+def test_並べて進めるときの決まりがある():
+    claude = (CORE / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "git worktree" in claude and "fetch は親が1回" in claude  # 穴3
+    doc = (CORE / "docs" / "harness" / "parallel.md").read_text(encoding="utf-8")
+    for must in ("fetch", "自分のブランチ名", ".env", "1本ずつ順に", "${"):
+        assert must in doc, must
+
+
+def test_共通部品は人が認めたらAIが書く():
+    claude = (CORE / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "AI がテストを先に書いて共通部品だけの PR を作る" in claude  # 穴6
+    assert "人が書くのではない" in claude
+    for layer in ("api", "web"):
+        text = (CORE.parent / "layers" / layer / "CLAUDE.md").read_text(encoding="utf-8")
+        assert "共通部品だけの PR" in text, layer
+
+
+def test_PRの大きさは本体とテストに分けて書く():
+    claude = (CORE / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "本体（テストを除く）400行" in claude and "テスト800行" in claude  # 穴8
+
+
+def test_完了の条件のStopフックは既定で無効():
+    hook = (CORE / ".claude" / "hooks" / "check-done-on-stop.py").read_text(encoding="utf-8")
+    assert "HARNESS_STOP_CHECK" in hook and "make check" in hook
+    settings = json.loads((CORE / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    assert "HARNESS_STOP_CHECK" not in json.dumps(settings.get("env", {}))

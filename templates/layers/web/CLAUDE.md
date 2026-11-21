@@ -12,8 +12,8 @@
 
 ## テスト
 - 単体テストは Vitest と Testing Library（`src/__tests__/`）。役割（role）か `data-testid` で要素を取る
-- 画面のテストは `e2e/`。testid は `画面-要素`（例：`request-list-filter`）の形にする
+- 画面のテストは `e2e/`。testid は `画面-要素`（例：`order-list-filter`）の形にする
 
 ## 止まって人へ戻す
-- 共通部品（`src/lib/`）を変える必要がある → `ai-stop:shared-component`
+- 共通部品（`src/lib/`）を変える必要がある → `ai-stop:shared-component`。人が判断チケットで認めたら、AI がテストを先に書いて共通部品だけの PR を作る
 - 画面の項目・並び・文言を、仕様にない形で変える必要がある → `ai-stop:spec-undecided`

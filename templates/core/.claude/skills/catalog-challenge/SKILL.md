@@ -36,8 +36,8 @@ disable-model-invocation: true
 | 状況 | 理由 |
 |---|---|
 | 新しい状態が既存の状態と重なる・ほかの正本と食い違う | `spec-conflict` |
-| 判定（請求の対象など）に入るかが決まっていない | `spec-undecided` |
-| 業務の扱いや取引先との約束が変わる | `customer-agreement` |
+| 判定（取り消せるかなど）に入るかが決まっていない | `spec-undecided` |
+| 業務の扱いや顧客との約束が変わる | `customer-agreement` |
 | すでにある依頼やデータの扱いが要る | `irreversible` |
 | 反証役が重要な所を確かめられなかった | `uncovered` |
 

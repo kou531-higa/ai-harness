@@ -1,7 +1,7 @@
 ---
 name: impact
 description: 変更の前に、影響する範囲（画面・API・バッチ・DB・テスト・仕様）を一覧にし、変える所・確かめる所・テストのない所を分ける。/feature と /bugfix の計画で使う
-argument-hint: "変えたいこと（例：B 社の保留を請求に含める扱い）"
+argument-hint: "変えたいこと（例：保留中の注文も在庫の引き当てに含める扱い）"
 disable-model-invocation: true
 ---
 
@@ -11,8 +11,8 @@ disable-model-invocation: true
 
 ## 手順
 
-1. **言葉を選ぶ**：変えたいことに出てくる状態名・テーブル名・列名・関数名・取引先コード・画面ID を、実装の書き方で3〜8個選ぶ
-   （例：`ON_HOLD`・`maintenance_paid`・`sp_close_monthly_billing`・`SCR-005`）。
+1. **言葉を選ぶ**：変えたいことに出てくる状態名・テーブル名・列名・関数名・顧客コード・画面ID を、実装の書き方で3〜8個選ぶ
+   （例：`ON_HOLD`・`reserved_qty`・`sp_reserve_stock`・`SCR-005`）。
 2. **機械で探す**：`python3 scripts/impact.py <言葉...>`。層ごとの件数と「テストなし」の層を確かめる。
 3. **1段たどる**：当たった関数・SQL・API を呼んでいる所を、その名前でもう一度探す（画面 → API → SQL・プロシージャ → バッチ）。
    同じ判定が別の書き方で書かれていないかも探す（例：状態の一覧を文字列で並べている所）。

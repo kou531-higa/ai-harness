@@ -10,7 +10,7 @@
 - ログは共通のロガーだけ。`console.log` を使わない。**個人情報（氏名・電話番号・住所・メール）をログに出さない**
 - DB は TypeORM。SQL の組み立てとページングは共通の土台（`src/common/db/`）を使う。生の SQL を文字列でつながない
 - 更新が複数の表にまたがるときは、共通のトランザクションの仕組みを使う
-- 状態の判定（「請求の対象か」など）は `src/common/catalog/`（カタログから作ったもの）を使う。`where status = '...'` を直接書かない
+- 状態の判定（「取り消せる注文か」など）は `src/common/catalog/`（カタログから作ったもの）を使う。`where status = '...'` を直接書かない
 - API には Swagger の説明を付ける
 
 ## テスト
@@ -18,5 +18,5 @@
 - API を HTTP で呼ぶテストは supertest（`test/`）
 
 ## 止まって人へ戻す
-- 共通部品（`src/common/`）やカタログを変える必要がある → `ai-stop:shared-component`
+- 共通部品（`src/common/`）やカタログを変える必要がある → `ai-stop:shared-component`。人が判断チケットで認めたら、AI がテストを先に書いて共通部品だけの PR を作る
 - 応答の形（項目名・型）を、既存の利用者に影響する形で変える → `ai-stop:customer-agreement`
