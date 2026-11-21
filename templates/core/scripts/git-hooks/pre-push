@@ -1,26 +1,114 @@
 #!/usr/bin/env python3
-"""main への直接の push を止める（harness init が .git/hooks/pre-push に入れる）。
+"""main への直接の push を止め、push するコミットの禁止パターンを見る（harness init が .git/hooks/pre-push に入れる）。
 
 GitHub の無料プランの非公開リポジトリでは、ブランチ保護が使えない。
 その代わりに手元で止める。main を変えるのは、PR を `make merge` でマージしたときだけ。
 守るブランチは環境変数 HARNESS_PROTECTED_BRANCHES（カンマ区切り）で変えられる。
+
+相手の参照がないとき（git は SHA を全部 0 で渡す）は、比べる基準を変える。
+- 新しいブランチ：既定の枝（<remote>/HEAD、なければ守るブランチの先頭）との分岐点から見る
+- 空のリポジトリへの最初の push：守るブランチへの push でも止めず、禁止パターンの検査（全部のファイル）だけをする
+禁止パターンの検査（scripts/check_forbidden.py と .claude/forbidden-patterns.json）がなければ、守るブランチだけを見る。
 """
 
 import os
+import subprocess
 import sys
 
+ZERO = "0" * 40
+CHECKER = os.path.join("scripts", "check_forbidden.py")
+CONFIG = os.path.join(".claude", "forbidden-patterns.json")
+
 protected = [b.strip() for b in os.environ.get("HARNESS_PROTECTED_BRANCHES", "main").split(",") if b.strip()]
-refs = {f"refs/heads/{b}" for b in protected}
+refs = {"refs/heads/" + b for b in protected}
+remote = sys.argv[1] if len(sys.argv) > 1 else ""
+
+
+def git(*args):
+    """成功したら出力、失敗したら None。"""
+    try:
+        r = subprocess.run(["git"] + list(args), capture_output=True, text=True, check=False)
+    except OSError:
+        return None
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def is_zero(sha):
+    return len(sha) >= 40 and set(sha) == {"0"}
+
+
+def remote_is_empty():
+    if not remote:
+        return False
+    out = git("ls-remote", remote)
+    return out is not None and out == ""
+
+
+def default_base(local_sha):
+    """既定の枝との分岐点。見つからなければ None。"""
+    cands = []
+    if remote:
+        cands.append("refs/remotes/{}/HEAD".format(remote))
+        cands += ["refs/remotes/{}/{}".format(remote, b) for b in protected]
+    cands += ["refs/heads/" + b for b in protected]
+    for ref in cands:
+        if git("rev-parse", "--verify", "-q", ref + "^{commit}"):
+            base = git("merge-base", ref, local_sha)
+            if base and base != local_sha:
+                return base
+    return None
+
+
+def forbidden(args):
+    """禁止パターンに当たれば、その出力。当たらない・検査がないなら None。"""
+    if not (os.path.exists(CHECKER) and os.path.exists(CONFIG)):
+        return None
+    r = subprocess.run([sys.executable, CHECKER] + args, capture_output=True, text=True, check=False)
+    return (r.stdout + r.stderr) if r.returncode != 0 else None
+
 
 blocked = []
+findings = []
+empty = None
 for line in sys.stdin:
     parts = line.split()
-    if len(parts) == 4 and parts[2] in refs:
-        blocked.append(parts[2].replace("refs/heads/", ""))
+    if len(parts) != 4:
+        continue
+    local_ref, local_sha, remote_ref, remote_sha = parts
+    if is_zero(local_sha):  # 消す push
+        if remote_ref in refs:
+            blocked.append(remote_ref.replace("refs/heads/", ""))
+        continue
+    if remote_ref in refs:
+        if empty is None:
+            empty = is_zero(remote_sha) and remote_is_empty()
+        if not empty:
+            blocked.append(remote_ref.replace("refs/heads/", ""))
+            continue
+        out = forbidden(["--all", "--head", local_sha])
+    elif not remote_ref.startswith("refs/heads/"):
+        continue  # タグなど
+    elif is_zero(remote_sha):
+        if empty is None:
+            empty = remote_is_empty()
+        if empty:
+            out = forbidden(["--all", "--head", local_sha])
+        else:
+            base = default_base(local_sha)
+            out = forbidden(["--base", base, "--head", local_sha]) if base else None
+    elif git("cat-file", "-e", remote_sha + "^{commit}") is not None:
+        out = forbidden(["--base", remote_sha, "--head", local_sha])
+    else:
+        out = None  # 相手のコミットが手元にない。PR の検査に任せる
+    if out:
+        findings.append(out)
 
 if blocked:
     sys.stderr.write(
-        f"push を止めました：{', '.join(sorted(set(blocked)))} へは直接 push しません。\n"
-        "ブランチを切って PR を作り、検査が緑になってから make merge PR=<番号> でマージしてください。\n"
+        "push を止めました：{} へは直接 push しません。\n".format(", ".join(sorted(set(blocked))))
+        + "ブランチを切って PR を作り、検査が緑になってから make merge PR=<番号> でマージしてください。\n"
     )
+    sys.exit(1)
+if findings:
+    sys.stderr.write("push を止めました：push するコミットに禁止パターンがあります。\n" + "\n".join(findings))
     sys.exit(1)

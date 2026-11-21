@@ -2,7 +2,7 @@ name: pr-check
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, synchronize, reopened, labeled, unlabeled, edited]  # edited：本文の「関係する DEC」を見直す
 
 permissions:
   contents: read
@@ -18,11 +18,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: PR の変更行数（上限 400 行）
+      - name: PR の変更行数（本体 400 行・テスト 800 行）
         env:
           # ラベル名は env 経由で渡す（スクリプトに直接埋め込まない）
           LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
           BASE_REF: ${{ github.base_ref }}
+          # 上限はリポジトリの変数（Settings → Variables）で変えられる。空なら既定（400・800）
+          HARNESS_PR_MAX: ${{ vars.HARNESS_PR_MAX }}
+          HARNESS_PR_MAX_TESTS: ${{ vars.HARNESS_PR_MAX_TESTS }}
         run: python3 scripts/check_pr_size.py --base "origin/${BASE_REF}" --labels "$LABELS"
       - name: 衝突の印が残っていない（<<<<<<< と >>>>>>> の行）
         run: |
@@ -70,6 +73,16 @@ jobs:
           else
             echo "機能一覧（docs/specs/functions.md）がないので飛ばします"
           fi
+      - name: 参照している DEC の判断記録がある（PR の本文と仕様）
+        env:
+          # PR の本文は env 経由で渡す（スクリプトに直接埋め込まない）
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s\n' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
+          targets=""
+          [ -d docs/specs ] && targets="docs/specs"
+          [ -d docs/decisions ] && targets="$targets docs/decisions"
+          python3 scripts/check_dec_refs.py --body-file "$RUNNER_TEMP/pr-body.md" $targets
       - name: 未決事項台帳が仕様と合っている
         run: |
           if [ -f docs/decisions/undecided.md ]; then

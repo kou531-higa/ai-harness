@@ -3,10 +3,11 @@
 
   python3 scripts/check_forbidden.py --base origin/main   PR で追加した行だけを見る。当たれば exit 1
   python3 scripts/check_forbidden.py --all                管理しているファイルすべて（毎晩の一覧。今ある所を数える）
+  --head <コミット>  HEAD の代わりに、そのコミットを見る（pre-push が push するコミットを渡す）
 
 決まりの種類：
   pattern      正規表現に当たる行
-  state-list   states に並べた状態名のうち、2つ以上を文字列で書いた行（「請求の対象」などの判定の直書き）
+  state-list   states に並べた状態名のうち、2つ以上を文字列で書いた行（「取り消せる注文か」などの判定の直書き）
 例外：行末に「forbidden-ok: <id> <理由>」。理由のないものは例外にしない。
 """
 
@@ -29,9 +30,9 @@ def git(*args: str) -> str:
     return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout
 
 
-def added_lines(base: str) -> List[Tuple[str, int, str]]:
+def added_lines(base: str, head: str = "HEAD") -> List[Tuple[str, int, str]]:
     out, path, line_no = [], None, 0
-    for line in git("diff", "-U0", "--no-color", f"{base}...HEAD").splitlines():
+    for line in git("diff", "-U0", "--no-color", f"{base}...{head}").splitlines():
         if line.startswith("+++ "):
             path = line[6:] if line.startswith("+++ b/") else None
         elif line.startswith("@@"):
@@ -43,12 +44,18 @@ def added_lines(base: str) -> List[Tuple[str, int, str]]:
     return out
 
 
-def all_lines() -> List[Tuple[str, int, str]]:
+def all_lines(head: Optional[str] = None) -> List[Tuple[str, int, str]]:
+    """head がなければ作業中のファイル、あればそのコミットのファイル。"""
     out = []
-    for path in git("ls-files").splitlines():
+    paths = git("ls-tree", "-r", "--name-only", head).splitlines() if head else git("ls-files").splitlines()
+    for path in paths:
         try:
-            text = Path(path).read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+            if head:
+                raw = subprocess.run(["git", "show", f"{head}:{path}"], capture_output=True, check=True).stdout
+                text = raw.decode("utf-8")
+            else:
+                text = Path(path).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError, subprocess.CalledProcessError):
             continue
         out += [(path, i + 1, line) for i, line in enumerate(text.splitlines())]
     return out
@@ -92,12 +99,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="禁止パターンの検査")
     parser.add_argument("--base", default="origin/main")
     parser.add_argument("--all", action="store_true", help="差分ではなく、管理しているファイルすべて")
+    parser.add_argument("--head", default=None, help="見るコミット（既定は HEAD。--all では作業中のファイル）")
     parser.add_argument("--config", default=str(CONFIG))
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
     rules = compile_rules(json.loads(Path(args.config).read_text(encoding="utf-8")))
-    found = check(all_lines() if args.all else added_lines(args.base), rules)
+    lines = all_lines(args.head) if args.all else added_lines(args.base, args.head or "HEAD")
+    found = check(lines, rules)
     if args.json:
         print(json.dumps({"count": len(found), "items": found}, ensure_ascii=False, indent=2))
         return 1 if found else 0
